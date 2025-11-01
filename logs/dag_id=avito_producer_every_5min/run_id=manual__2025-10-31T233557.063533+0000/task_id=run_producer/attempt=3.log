@@ -1,0 +1,37 @@
+[2025-11-01T00:48:14.458+0100] {local_task_job_runner.py:120} INFO - ::group::Pre task execution logs
+[2025-11-01T00:48:14.507+0100] {taskinstance.py:2076} INFO - Dependencies all met for dep_context=non-requeueable deps ti=<TaskInstance: avito_producer_every_5min.run_producer manual__2025-10-31T23:35:57.063533+00:00 [queued]>
+[2025-11-01T00:48:14.518+0100] {taskinstance.py:2076} INFO - Dependencies all met for dep_context=requeueable deps ti=<TaskInstance: avito_producer_every_5min.run_producer manual__2025-10-31T23:35:57.063533+00:00 [queued]>
+[2025-11-01T00:48:14.519+0100] {taskinstance.py:2306} INFO - Starting attempt 3 of 3
+[2025-11-01T00:48:14.537+0100] {taskinstance.py:2330} INFO - Executing <Task(BashOperator): run_producer> on 2025-10-31 23:35:57.063533+00:00
+[2025-11-01T00:48:14.546+0100] {standard_task_runner.py:90} INFO - Running: ['***', 'tasks', 'run', 'avito_producer_every_5min', 'run_producer', 'manual__2025-10-31T23:35:57.063533+00:00', '--job-id', '107', '--raw', '--subdir', 'DAGS_FOLDER/avito_pipeline.py', '--cfg-path', '/tmp/tmphj2vg_45']
+[2025-11-01T00:48:14.550+0100] {standard_task_runner.py:91} INFO - Job 107: Subtask run_producer
+[2025-11-01T00:48:14.550+0100] {logging_mixin.py:188} WARNING - /home/***/.local/lib/python3.12/site-packages/***/task/task_runner/standard_task_runner.py:62 DeprecationWarning: This process (pid=596) is multi-threaded, use of fork() may lead to deadlocks in the child.
+[2025-11-01T00:48:14.551+0100] {standard_task_runner.py:64} INFO - Started process 597 to run task
+[2025-11-01T00:48:14.620+0100] {task_command.py:426} INFO - Running <TaskInstance: avito_producer_every_5min.run_producer manual__2025-10-31T23:35:57.063533+00:00 [running]> on host 840b98c7ef92
+[2025-11-01T00:48:14.747+0100] {taskinstance.py:2648} INFO - Exporting env vars: AIRFLOW_CTX_DAG_OWNER='avito' AIRFLOW_CTX_DAG_ID='avito_producer_every_5min' AIRFLOW_CTX_TASK_ID='run_producer' AIRFLOW_CTX_EXECUTION_DATE='2025-10-31T23:35:57.063533+00:00' AIRFLOW_CTX_TRY_NUMBER='3' AIRFLOW_CTX_DAG_RUN_ID='manual__2025-10-31T23:35:57.063533+00:00'
+[2025-11-01T00:48:14.748+0100] {taskinstance.py:430} INFO - ::endgroup::
+[2025-11-01T00:48:14.771+0100] {subprocess.py:63} INFO - Tmp dir root location: /tmp
+[2025-11-01T00:48:14.773+0100] {subprocess.py:75} INFO - Running command: ['/usr/bin/bash', '-c', 'docker exec -i avito-scraper bash -lc "PYTHONPATH=/app/src python /app/src/Pipeline/extract/avito_producer.py --mode louer --pages 1 --limit 10 --bootstrap kafka:9092 --topic realestate.avito.raw"']
+[2025-11-01T00:48:14.785+0100] {subprocess.py:86} INFO - Output:
+[2025-11-01T00:48:14.955+0100] {subprocess.py:93} INFO - python: can't open file '/app/src/Pipeline/extract/avito_producer.py': [Errno 2] No such file or directory
+[2025-11-01T00:48:14.966+0100] {subprocess.py:97} INFO - Command exited with return code 2
+[2025-11-01T00:48:14.967+0100] {taskinstance.py:441} INFO - ::group::Post task execution logs
+[2025-11-01T00:48:14.982+0100] {taskinstance.py:2905} ERROR - Task failed with exception
+Traceback (most recent call last):
+  File "/home/airflow/.local/lib/python3.12/site-packages/airflow/models/taskinstance.py", line 465, in _execute_task
+    result = _execute_callable(context=context, **execute_callable_kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/airflow/.local/lib/python3.12/site-packages/airflow/models/taskinstance.py", line 432, in _execute_callable
+    return execute_callable(context=context, **execute_callable_kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/airflow/.local/lib/python3.12/site-packages/airflow/models/baseoperator.py", line 401, in wrapper
+    return func(self, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/airflow/.local/lib/python3.12/site-packages/airflow/operators/bash.py", line 243, in execute
+    raise AirflowException(
+airflow.exceptions.AirflowException: Bash command failed. The command returned a non-zero exit code 2.
+[2025-11-01T00:48:14.989+0100] {taskinstance.py:1206} INFO - Marking task as FAILED. dag_id=avito_producer_every_5min, task_id=run_producer, run_id=manual__2025-10-31T23:35:57.063533+00:00, execution_date=20251031T233557, start_date=20251031T234814, end_date=20251031T234814
+[2025-11-01T00:48:15.004+0100] {standard_task_runner.py:110} ERROR - Failed to execute job 107 for task run_producer (Bash command failed. The command returned a non-zero exit code 2.; 597)
+[2025-11-01T00:48:15.047+0100] {local_task_job_runner.py:243} INFO - Task exited with return code 1
+[2025-11-01T00:48:15.085+0100] {taskinstance.py:3503} INFO - 0 downstream tasks scheduled from follow-on schedule check
+[2025-11-01T00:48:15.093+0100] {local_task_job_runner.py:222} INFO - ::endgroup::

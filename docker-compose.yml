@@ -1,0 +1,298 @@
+name: avito-dev
+
+services:
+  # ---------- KAFKA (KRaft, no ZooKeeper) ----------
+  kafka:
+    image: confluentinc/cp-kafka:7.6.1
+    container_name: kafka
+    hostname: kafka
+    ports:
+      - "${KAFKA_OUTSIDE_PORT:-9094}:9094"   # host -> container EXTERNAL listener
+    environment:
+      # KRaft
+      CLUSTER_ID: "sK2LYycVQImjaKjkeukr0g"
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+
+      # Listeners
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093,EXTERNAL://0.0.0.0:9094
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,EXTERNAL://localhost:${KAFKA_OUTSIDE_PORT:-9094}
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+
+      # Dev-friendly
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      TZ: Africa/Casablanca
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD", "bash", "-lc", "kafka-topics --bootstrap-server localhost:9092 --list >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  # ---------- KAFKA UI ----------
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    depends_on:
+      kafka:
+        condition: service_healthy
+    ports:
+      - "${KAFKA_UI_PORT:-8090}:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: dev
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+      KAFKA_CLUSTERS_0_READONLY: "false"
+
+  # ---------- SCRAPER (dev workspace) ----------
+  scraper:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: avito-scraper
+    depends_on:
+      kafka:
+        condition: service_healthy
+    environment:
+      PYTHONPATH: /app/src
+      TZ: Africa/Casablanca
+    working_dir: /app
+    volumes:
+      - ./src:/app/src:rw
+      - ./data:/data:rw
+    command: bash -lc "sleep infinity"
+    restart: unless-stopped
+
+  # ---------- OPTIONAL: Live console consumer ----------
+  avito-consumer:
+    image: apache/airflow:2.9.3
+    container_name: avito-consumer
+    depends_on:
+      kafka:
+        condition: service_healthy
+    environment:
+      PYTHONPATH: /opt/airflow/src
+      _PIP_ADDITIONAL_REQUIREMENTS: "confluent-kafka"
+      TZ: Africa/Casablanca
+    working_dir: /opt/airflow
+    volumes:
+      - ./src:/opt/airflow/src
+    command: >
+      bash -lc "python -m Pipeline.consumer.avito_consumer
+      --bootstrap kafka:9092 --topic realestate.avito.raw --group avito.dev.print"
+
+  # ---------- AIRFLOW (Postgres + Web + Scheduler) ----------
+  airflow-db:
+    image: postgres:16
+    container_name: airflow-db
+    environment:
+      POSTGRES_DB: airflow
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+    volumes:
+      - airflow_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "airflow"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  airflow-init:
+    image: apache/airflow:2.9.3
+    container_name: airflow-init
+    depends_on:
+      airflow-db:
+        condition: service_healthy
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow-db:5432/airflow
+      AIRFLOW__CORE__LOAD_EXAMPLES: "False"
+      TZ: Africa/Casablanca
+      PYTHONPATH: /opt/airflow/src
+      AIRFLOW__WEBSERVER__SECRET_KEY: "cec3300a6cb1a218a99765cfa3bed06f816822e6c7e350bd2d77929c21be9133"
+      _PIP_ADDITIONAL_REQUIREMENTS: >
+        apache-airflow-providers-docker==3.8.1
+        requests beautifulsoup4 lxml confluent-kafka
+    command: >
+      bash -lc "
+        airflow db init &&
+        airflow users create --role Admin --username admin --password admin
+        --firstname Admin --lastname User --email admin@example.com || true
+      "
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./src:/opt/airflow/src
+      - ./logs:/opt/airflow/logs
+
+  airflow-webserver:
+    image: apache/airflow:2.9.3
+    container_name: airflow-web
+    depends_on:
+      airflow-db:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
+      kafka:
+        condition: service_healthy
+    ports:
+      - "8088:8080"
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow-db:5432/airflow
+      AIRFLOW__CORE__LOAD_EXAMPLES: "False"
+      AIRFLOW__CORE__DEFAULT_TIMEZONE: Africa/Casablanca
+      TZ: Africa/Casablanca
+      PYTHONPATH: /opt/airflow/src
+      AIRFLOW__WEBSERVER__SECRET_KEY: "cec3300a6cb1a218a99765cfa3bed06f816822e6c7e350bd2d77929c21be9133"
+      AIRFLOW__WEBSERVER__WORKER_LOG_SERVER_PORT: "8793"
+      AIRFLOW__LOGGING__BASE_LOG_FOLDER: "/opt/airflow/logs"
+      _PIP_ADDITIONAL_REQUIREMENTS: >
+        apache-airflow-providers-docker==3.8.1
+        requests beautifulsoup4 lxml confluent-kafka
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./src:/opt/airflow/src
+      - ./logs:/opt/airflow/logs
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: webserver
+
+  airflow-scheduler:
+    image: apache/airflow:2.9.3
+    container_name: airflow-scheduler
+    depends_on:
+      airflow-db:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
+      kafka:
+        condition: service_healthy
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow-db:5432/airflow
+      AIRFLOW__CORE__LOAD_EXAMPLES: "False"
+      AIRFLOW__CORE__DEFAULT_TIMEZONE: Africa/Casablanca
+      TZ: Africa/Casablanca
+      PYTHONPATH: /opt/airflow/src
+      AIRFLOW__WEBSERVER__SECRET_KEY: "cec3300a6cb1a218a99765cfa3bed06f816822e6c7e350bd2d77929c21be9133"
+      AIRFLOW__WEBSERVER__WORKER_LOG_SERVER_PORT: "8793"
+      AIRFLOW__LOGGING__BASE_LOG_FOLDER: "/opt/airflow/logs"
+      _PIP_ADDITIONAL_REQUIREMENTS: >
+        apache-airflow-providers-docker==3.8.1
+        requests beautifulsoup4 lxml confluent-kafka
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./src:/opt/airflow/src
+      - ./logs:/opt/airflow/logs
+      - /var/run/docker.sock:/var/run/docker.sock   
+    command: scheduler
+
+
+
+
+# ---------- MINIO (S3-compatible object store) ----------
+  minio:
+    image: minio/minio:RELEASE.2024-09-22T00-33-43Z
+    container_name: minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-admin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-admin123}
+    ports:
+      - "${MINIO_API_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  # one-shot bucket + policy setup
+  minio-setup:
+    image: minio/mc:latest 
+    container_name: minio-setup
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: /bin/sh -c
+    command: >
+      "
+      mc alias set local http://minio:9000 ${MINIO_ROOT_USER:-admin} ${MINIO_ROOT_PASSWORD:-admin123} &&
+      mc mb -p local/lake || true &&
+      mc anonymous set download local/lake || true
+      "
+
+  iceberg-rest:
+    image: tabulario/iceberg-rest:1.6.0
+    container_name: iceberg-rest
+    depends_on:
+      minio:         
+       condition: service_healthy
+    environment:
+      # REST server writes to MinIO
+      CATALOG_IO__IMPL: org.apache.iceberg.aws.s3.S3FileIO
+      CATALOG_WAREHOUSE: s3://lake/warehouse
+        
+      # S3/MinIO connection settings
+      CATALOG_S3_ENDPOINT: http://minio:9000
+      CATALOG_S3_PATH__STYLE__ACCESS: "true"
+      CATALOG_S3_ACCESS__KEY__ID: ${MINIO_ROOT_USER:-admin}
+      CATALOG_S3_SECRET__ACCESS__KEY: ${MINIO_ROOT_PASSWORD:-admin123}
+        
+        # AWS SDK configuration (critical!)
+      AWS_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER:-admin}
+      AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:-admin123}
+        
+        # Alternative S3 configuration format
+      S3_ENDPOINT: http://minio:9000
+      S3_PATH_STYLE_ACCESS: "true"
+      S3_ACCESS_KEY_ID: ${MINIO_ROOT_USER:-admin}
+      S3_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:-admin123}
+      S3_REGION: us-east-1
+    ports:
+      - "8181:8181"
+
+
+
+
+
+# ---------- SPARK (one-shot runner with Iceberg + Kafka) ----------
+  spark-iceberg:
+    build:
+      context: .
+      dockerfile: Dockerfile.spark
+    image: spark-iceberg:local
+    container_name: spark-iceberg
+    depends_on:
+      iceberg-rest:
+        condition: service_started
+      kafka:
+        condition: service_healthy
+    environment:
+      SPARK_NO_DAEMONIZE: "true"
+      AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER:-admin}
+      AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:-admin123}
+      AWS_REGION: us-east-1
+    working_dir: /opt/work
+    volumes:
+      - ./src:/opt/work/src:rw
+    command: bash -lc "sleep infinity"
+
+
+
+
+
+
+volumes:
+  kafka_data: {}
+  airflow_pg: {}
+  minio_data: {}

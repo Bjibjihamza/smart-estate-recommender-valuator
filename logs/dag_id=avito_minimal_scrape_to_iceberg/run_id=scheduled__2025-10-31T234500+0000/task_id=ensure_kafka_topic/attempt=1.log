@@ -1,0 +1,44 @@
+[2025-11-01T00:50:15.961+0100] {local_task_job_runner.py:120} INFO - ::group::Pre task execution logs
+[2025-11-01T00:50:16.007+0100] {taskinstance.py:2076} INFO - Dependencies all met for dep_context=non-requeueable deps ti=<TaskInstance: avito_minimal_scrape_to_iceberg.ensure_kafka_topic scheduled__2025-10-31T23:45:00+00:00 [queued]>
+[2025-11-01T00:50:16.017+0100] {taskinstance.py:2076} INFO - Dependencies all met for dep_context=requeueable deps ti=<TaskInstance: avito_minimal_scrape_to_iceberg.ensure_kafka_topic scheduled__2025-10-31T23:45:00+00:00 [queued]>
+[2025-11-01T00:50:16.018+0100] {taskinstance.py:2306} INFO - Starting attempt 1 of 3
+[2025-11-01T00:50:16.034+0100] {taskinstance.py:2330} INFO - Executing <Task(BashOperator): ensure_kafka_topic> on 2025-10-31 23:45:00+00:00
+[2025-11-01T00:50:16.041+0100] {standard_task_runner.py:90} INFO - Running: ['***', 'tasks', 'run', 'avito_minimal_scrape_to_iceberg', 'ensure_kafka_topic', 'scheduled__2025-10-31T23:45:00+00:00', '--job-id', '110', '--raw', '--subdir', 'DAGS_FOLDER/avito_pipeline.py', '--cfg-path', '/tmp/tmp0wza_mm5']
+[2025-11-01T00:50:16.045+0100] {standard_task_runner.py:91} INFO - Job 110: Subtask ensure_kafka_topic
+[2025-11-01T00:50:16.046+0100] {logging_mixin.py:188} WARNING - /home/***/.local/lib/python3.12/site-packages/***/task/task_runner/standard_task_runner.py:62 DeprecationWarning: This process (pid=657) is multi-threaded, use of fork() may lead to deadlocks in the child.
+[2025-11-01T00:50:16.047+0100] {standard_task_runner.py:64} INFO - Started process 658 to run task
+[2025-11-01T00:50:16.115+0100] {task_command.py:426} INFO - Running <TaskInstance: avito_minimal_scrape_to_iceberg.ensure_kafka_topic scheduled__2025-10-31T23:45:00+00:00 [running]> on host 840b98c7ef92
+[2025-11-01T00:50:16.231+0100] {taskinstance.py:2648} INFO - Exporting env vars: AIRFLOW_CTX_DAG_OWNER='avito' AIRFLOW_CTX_DAG_ID='avito_minimal_scrape_to_iceberg' AIRFLOW_CTX_TASK_ID='ensure_kafka_topic' AIRFLOW_CTX_EXECUTION_DATE='2025-10-31T23:45:00+00:00' AIRFLOW_CTX_TRY_NUMBER='1' AIRFLOW_CTX_DAG_RUN_ID='scheduled__2025-10-31T23:45:00+00:00'
+[2025-11-01T00:50:16.232+0100] {taskinstance.py:430} INFO - ::endgroup::
+[2025-11-01T00:50:16.249+0100] {subprocess.py:63} INFO - Tmp dir root location: /tmp
+[2025-11-01T00:50:16.250+0100] {subprocess.py:75} INFO - Running command: ['/usr/bin/bash', '-c', 'docker exec -i kafka bash -lc "kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists --topic realestate.avito.raw --partitions 1 --replication-factor 1"']
+[2025-11-01T00:50:16.259+0100] {subprocess.py:86} INFO - Output:
+[2025-11-01T00:50:17.600+0100] {subprocess.py:93} INFO - WARNING: Due to limitations in metric names, topics with a period ('.') or underscore ('_') could collide. To avoid issues it is best to use either, but not both.
+[2025-11-01T00:50:18.659+0100] {subprocess.py:97} INFO - Command exited with return code 0
+[2025-11-01T00:50:18.661+0100] {taskinstance.py:441} INFO - ::group::Post task execution logs
+[2025-11-01T00:50:18.701+0100] {taskinstance.py:1206} INFO - Marking task as SUCCESS. dag_id=avito_minimal_scrape_to_iceberg, task_id=ensure_kafka_topic, run_id=scheduled__2025-10-31T23:45:00+00:00, execution_date=20251031T234500, start_date=20251031T235016, end_date=20251031T235018
+[2025-11-01T00:50:18.754+0100] {local_task_job_runner.py:243} INFO - Task exited with return code 0
+[2025-11-01T00:50:18.790+0100] {taskinstance.py:3503} INFO - 1 downstream tasks scheduled from follow-on schedule check
+[2025-11-01T00:50:18.794+0100] {local_task_job_runner.py:222} INFO - ::endgroup::
+[2025-11-01T00:54:12.424+0100] {local_task_job_runner.py:120} INFO - ::group::Pre task execution logs
+[2025-11-01T00:54:12.485+0100] {taskinstance.py:2076} INFO - Dependencies all met for dep_context=non-requeueable deps ti=<TaskInstance: avito_minimal_scrape_to_iceberg.ensure_kafka_topic scheduled__2025-10-31T23:45:00+00:00 [queued]>
+[2025-11-01T00:54:12.497+0100] {taskinstance.py:2076} INFO - Dependencies all met for dep_context=requeueable deps ti=<TaskInstance: avito_minimal_scrape_to_iceberg.ensure_kafka_topic scheduled__2025-10-31T23:45:00+00:00 [queued]>
+[2025-11-01T00:54:12.498+0100] {taskinstance.py:2306} INFO - Starting attempt 1 of 3
+[2025-11-01T00:54:12.520+0100] {taskinstance.py:2330} INFO - Executing <Task(BashOperator): ensure_kafka_topic> on 2025-10-31 23:45:00+00:00
+[2025-11-01T00:54:12.531+0100] {standard_task_runner.py:90} INFO - Running: ['***', 'tasks', 'run', 'avito_minimal_scrape_to_iceberg', 'ensure_kafka_topic', 'scheduled__2025-10-31T23:45:00+00:00', '--job-id', '115', '--raw', '--subdir', 'DAGS_FOLDER/avito_pipeline.py', '--cfg-path', '/tmp/tmp_y_zhtco']
+[2025-11-01T00:54:12.536+0100] {standard_task_runner.py:91} INFO - Job 115: Subtask ensure_kafka_topic
+[2025-11-01T00:54:12.536+0100] {logging_mixin.py:188} WARNING - /home/***/.local/lib/python3.12/site-packages/***/task/task_runner/standard_task_runner.py:62 DeprecationWarning: This process (pid=758) is multi-threaded, use of fork() may lead to deadlocks in the child.
+[2025-11-01T00:54:12.537+0100] {standard_task_runner.py:64} INFO - Started process 759 to run task
+[2025-11-01T00:54:12.621+0100] {task_command.py:426} INFO - Running <TaskInstance: avito_minimal_scrape_to_iceberg.ensure_kafka_topic scheduled__2025-10-31T23:45:00+00:00 [running]> on host 840b98c7ef92
+[2025-11-01T00:54:12.757+0100] {taskinstance.py:2648} INFO - Exporting env vars: AIRFLOW_CTX_DAG_OWNER='avito' AIRFLOW_CTX_DAG_ID='avito_minimal_scrape_to_iceberg' AIRFLOW_CTX_TASK_ID='ensure_kafka_topic' AIRFLOW_CTX_EXECUTION_DATE='2025-10-31T23:45:00+00:00' AIRFLOW_CTX_TRY_NUMBER='1' AIRFLOW_CTX_DAG_RUN_ID='scheduled__2025-10-31T23:45:00+00:00'
+[2025-11-01T00:54:12.759+0100] {taskinstance.py:430} INFO - ::endgroup::
+[2025-11-01T00:54:12.785+0100] {subprocess.py:63} INFO - Tmp dir root location: /tmp
+[2025-11-01T00:54:12.788+0100] {subprocess.py:75} INFO - Running command: ['/usr/bin/bash', '-c', 'docker exec -i kafka bash -lc "kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists --topic realestate.avito.raw --partitions 1 --replication-factor 1"']
+[2025-11-01T00:54:12.821+0100] {subprocess.py:86} INFO - Output:
+[2025-11-01T00:54:14.052+0100] {subprocess.py:93} INFO - WARNING: Due to limitations in metric names, topics with a period ('.') or underscore ('_') could collide. To avoid issues it is best to use either, but not both.
+[2025-11-01T00:54:14.780+0100] {subprocess.py:97} INFO - Command exited with return code 0
+[2025-11-01T00:54:14.781+0100] {taskinstance.py:441} INFO - ::group::Post task execution logs
+[2025-11-01T00:54:14.812+0100] {taskinstance.py:1206} INFO - Marking task as SUCCESS. dag_id=avito_minimal_scrape_to_iceberg, task_id=ensure_kafka_topic, run_id=scheduled__2025-10-31T23:45:00+00:00, execution_date=20251031T234500, start_date=20251031T235412, end_date=20251031T235414
+[2025-11-01T00:54:14.840+0100] {local_task_job_runner.py:243} INFO - Task exited with return code 0
+[2025-11-01T00:54:14.875+0100] {taskinstance.py:3503} INFO - 1 downstream tasks scheduled from follow-on schedule check
+[2025-11-01T00:54:14.878+0100] {local_task_job_runner.py:222} INFO - ::endgroup::

@@ -1,0 +1,22 @@
+[2025-11-01T00:54:42.686+0100] {local_task_job_runner.py:120} INFO - ::group::Pre task execution logs
+[2025-11-01T00:54:42.727+0100] {taskinstance.py:2076} INFO - Dependencies all met for dep_context=non-requeueable deps ti=<TaskInstance: avito_minimal_scrape_to_iceberg.ensure_streaming_sink manual__2025-10-31T23:54:06+00:00 [queued]>
+[2025-11-01T00:54:42.738+0100] {taskinstance.py:2076} INFO - Dependencies all met for dep_context=requeueable deps ti=<TaskInstance: avito_minimal_scrape_to_iceberg.ensure_streaming_sink manual__2025-10-31T23:54:06+00:00 [queued]>
+[2025-11-01T00:54:42.738+0100] {taskinstance.py:2306} INFO - Starting attempt 1 of 3
+[2025-11-01T00:54:42.752+0100] {taskinstance.py:2330} INFO - Executing <Task(BashOperator): ensure_streaming_sink> on 2025-10-31 23:54:06+00:00
+[2025-11-01T00:54:42.759+0100] {standard_task_runner.py:90} INFO - Running: ['***', 'tasks', 'run', 'avito_minimal_scrape_to_iceberg', 'ensure_streaming_sink', 'manual__2025-10-31T23:54:06+00:00', '--job-id', '120', '--raw', '--subdir', 'DAGS_FOLDER/avito_pipeline.py', '--cfg-path', '/tmp/tmp_a_xjmef']
+[2025-11-01T00:54:42.762+0100] {standard_task_runner.py:91} INFO - Job 120: Subtask ensure_streaming_sink
+[2025-11-01T00:54:42.762+0100] {logging_mixin.py:188} WARNING - /home/***/.local/lib/python3.12/site-packages/***/task/task_runner/standard_task_runner.py:62 DeprecationWarning: This process (pid=824) is multi-threaded, use of fork() may lead to deadlocks in the child.
+[2025-11-01T00:54:42.763+0100] {standard_task_runner.py:64} INFO - Started process 825 to run task
+[2025-11-01T00:54:42.820+0100] {task_command.py:426} INFO - Running <TaskInstance: avito_minimal_scrape_to_iceberg.ensure_streaming_sink manual__2025-10-31T23:54:06+00:00 [running]> on host 840b98c7ef92
+[2025-11-01T00:54:42.929+0100] {taskinstance.py:2648} INFO - Exporting env vars: AIRFLOW_CTX_DAG_OWNER='avito' AIRFLOW_CTX_DAG_ID='avito_minimal_scrape_to_iceberg' AIRFLOW_CTX_TASK_ID='ensure_streaming_sink' AIRFLOW_CTX_EXECUTION_DATE='2025-10-31T23:54:06+00:00' AIRFLOW_CTX_TRY_NUMBER='1' AIRFLOW_CTX_DAG_RUN_ID='manual__2025-10-31T23:54:06+00:00'
+[2025-11-01T00:54:42.931+0100] {taskinstance.py:430} INFO - ::endgroup::
+[2025-11-01T00:54:42.947+0100] {subprocess.py:63} INFO - Tmp dir root location: /tmp
+[2025-11-01T00:54:42.948+0100] {subprocess.py:75} INFO - Running command: ['/usr/bin/bash', '-c', '\ndocker exec -i spark-iceberg bash -lc \'\nset -euo pipefail\nmkdir -p /opt/work/checkpoints/avito_raw /opt/work/logs\ncat > /opt/work/run_avito_sink.sh << "SH"\n#!/usr/bin/env bash\nset -euo pipefail\nif pgrep -f "iceberg_kafka_sink.py .*--topic realestate.avito.raw" >/dev/null 2>&1; then\n  echo "[sink] already running"; exit 0\nfi\nnohup /opt/spark/bin/spark-submit   /opt/work/src/Pipeline/load/iceberg_kafka_sink.py   --rest-uri http://iceberg-rest:8181   --s3-endpoint http://minio:9000   --s3-access-key admin   --s3-secret-key admin123   --kafka-bootstrap kafka:9092   --topic realestate.avito.raw   --table rest.raw.avito   --checkpoint file:///opt/work/checkpoints/avito_raw   --starting-offsets latest   --trigger "15 seconds"   > /opt/work/logs/avito_sink.log 2>&1 &\necho "[sink] started"\nSH\nchmod +x /opt/work/run_avito_sink.sh\n/opt/work/run_avito_sink.sh\n\'']
+[2025-11-01T00:54:42.958+0100] {subprocess.py:86} INFO - Output:
+[2025-11-01T00:54:43.085+0100] {subprocess.py:93} INFO - [sink] already running
+[2025-11-01T00:54:43.093+0100] {subprocess.py:97} INFO - Command exited with return code 0
+[2025-11-01T00:54:43.093+0100] {taskinstance.py:441} INFO - ::group::Post task execution logs
+[2025-11-01T00:54:43.129+0100] {taskinstance.py:1206} INFO - Marking task as SUCCESS. dag_id=avito_minimal_scrape_to_iceberg, task_id=ensure_streaming_sink, run_id=manual__2025-10-31T23:54:06+00:00, execution_date=20251031T235406, start_date=20251031T235442, end_date=20251031T235443
+[2025-11-01T00:54:43.178+0100] {local_task_job_runner.py:243} INFO - Task exited with return code 0
+[2025-11-01T00:54:43.248+0100] {taskinstance.py:3503} INFO - 1 downstream tasks scheduled from follow-on schedule check
+[2025-11-01T00:54:43.254+0100] {local_task_job_runner.py:222} INFO - ::endgroup::

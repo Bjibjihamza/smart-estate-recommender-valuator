@@ -1,0 +1,36 @@
+[2025-10-31T18:25:00.870+0100] {local_task_job_runner.py:120} INFO - ::group::Pre task execution logs
+[2025-10-31T18:25:00.915+0100] {taskinstance.py:2076} INFO - Dependencies all met for dep_context=non-requeueable deps ti=<TaskInstance: avito_kafka_every_5min.run_avito_producer scheduled__2025-10-31T17:20:00+00:00 [queued]>
+[2025-10-31T18:25:00.925+0100] {taskinstance.py:2076} INFO - Dependencies all met for dep_context=requeueable deps ti=<TaskInstance: avito_kafka_every_5min.run_avito_producer scheduled__2025-10-31T17:20:00+00:00 [queued]>
+[2025-10-31T18:25:00.927+0100] {taskinstance.py:2306} INFO - Starting attempt 1 of 3
+[2025-10-31T18:25:00.944+0100] {taskinstance.py:2330} INFO - Executing <Task(BashOperator): run_avito_producer> on 2025-10-31 17:20:00+00:00
+[2025-10-31T18:25:00.955+0100] {standard_task_runner.py:90} INFO - Running: ['***', 'tasks', 'run', 'avito_kafka_every_5min', 'run_avito_producer', 'scheduled__2025-10-31T17:20:00+00:00', '--job-id', '19', '--raw', '--subdir', 'DAGS_FOLDER/avito_kafka_every_5min.py', '--cfg-path', '/tmp/tmpaf1r6lje']
+[2025-10-31T18:25:00.959+0100] {standard_task_runner.py:91} INFO - Job 19: Subtask run_avito_producer
+[2025-10-31T18:25:00.960+0100] {logging_mixin.py:188} WARNING - /home/***/.local/lib/python3.12/site-packages/***/task/task_runner/standard_task_runner.py:62 DeprecationWarning: This process (pid=1166) is multi-threaded, use of fork() may lead to deadlocks in the child.
+[2025-10-31T18:25:00.961+0100] {standard_task_runner.py:64} INFO - Started process 1167 to run task
+[2025-10-31T18:25:01.021+0100] {task_command.py:426} INFO - Running <TaskInstance: avito_kafka_every_5min.run_avito_producer scheduled__2025-10-31T17:20:00+00:00 [running]> on host bfe5844a8915
+[2025-10-31T18:25:01.167+0100] {taskinstance.py:2648} INFO - Exporting env vars: AIRFLOW_CTX_DAG_OWNER='data' AIRFLOW_CTX_DAG_ID='avito_kafka_every_5min' AIRFLOW_CTX_TASK_ID='run_avito_producer' AIRFLOW_CTX_EXECUTION_DATE='2025-10-31T17:20:00+00:00' AIRFLOW_CTX_TRY_NUMBER='1' AIRFLOW_CTX_DAG_RUN_ID='scheduled__2025-10-31T17:20:00+00:00'
+[2025-10-31T18:25:01.168+0100] {taskinstance.py:430} INFO - ::endgroup::
+[2025-10-31T18:25:01.184+0100] {subprocess.py:63} INFO - Tmp dir root location: /tmp
+[2025-10-31T18:25:01.185+0100] {subprocess.py:75} INFO - Running command: ['/usr/bin/bash', '-c', 'python -m Pipeline.producer.avito_producer --mode louer --pages 1 --limit 10 --bootstrap kafka:9092 --topic realestate.avito.raw']
+[2025-10-31T18:25:01.194+0100] {subprocess.py:86} INFO - Output:
+[2025-10-31T18:25:21.775+0100] {subprocess.py:93} INFO - [*] Mode: LOUER | Pages: 1 | Sink: kafka | Limit: 10
+[2025-10-31T18:25:21.776+0100] {subprocess.py:93} INFO - [SERP] Page 1 → https://www.avito.ma/fr/maroc/locations_immobilieres-à_louer
+[2025-10-31T18:25:21.776+0100] {subprocess.py:93} INFO -        Reached limit 10, stopping SERP crawl
+[2025-10-31T18:25:21.777+0100] {subprocess.py:93} INFO - [*] Total URLs: 10
+[2025-10-31T18:25:21.777+0100] {subprocess.py:93} INFO - [1/10] https://www.avito.ma/fr/hamria/local/Grand_magasin_57062109.htm
+[2025-10-31T18:25:21.777+0100] {subprocess.py:93} INFO - [2/10] https://www.avito.ma/fr/maarif/bureaux/Plateaux_de_Bureaux_à_Louer_pour_Métiers_Médicaux_57141550.htm
+[2025-10-31T18:25:21.778+0100] {subprocess.py:93} INFO - [3/10] https://www.avito.ma/fr/2_mars/appartements/Appartement_à_louer_80_m²_à_Casablanca_57061643.htm
+[2025-10-31T18:25:21.778+0100] {subprocess.py:93} INFO - [4/10] https://www.avito.ma/fr/hay_riad/appartements/appartement_en_location_prestigia_56525647.htm
+[2025-10-31T18:25:21.779+0100] {subprocess.py:93} INFO - [5/10] https://www.avito.ma/fr/mimosas/appartements/Appartement_158_m²_à_Kénitra_56278577.htm
+[2025-10-31T18:25:21.780+0100] {subprocess.py:93} INFO - [6/10] https://www.avito.ma/fr/sidi_maarouf/appartements/à_sidi_maarou_adarissa_Apprt_pour_location_57080975.htm
+[2025-10-31T18:25:21.780+0100] {subprocess.py:93} INFO - [7/10] https://www.avito.ma/fr/maarif/appartements/Appartement_120m_Haut_Standing_A_Maarif_Ex_57045994.htm
+[2025-10-31T18:25:21.781+0100] {subprocess.py:93} INFO - [8/10] https://www.avito.ma/fr/maarif/appartements/Studio_Vide_neuf_à_MAARIF_Reviera_56770353.htm
+[2025-10-31T18:25:21.781+0100] {subprocess.py:93} INFO - [9/10] https://www.avito.ma/fr/mimosas/appartements/Appartement_meublé_à_louer_56966310.htm
+[2025-10-31T18:25:21.782+0100] {subprocess.py:93} INFO - [10/10] https://www.avito.ma/fr/aïn_diab/villas_et_riads/Villa_moderne_meublée_à_Ain_Diab_Piscine_57101866.htm
+[2025-10-31T18:25:21.782+0100] {subprocess.py:93} INFO - [✓] Sent 10 messages to Kafka topic 'realestate.avito.raw'
+[2025-10-31T18:25:21.817+0100] {subprocess.py:97} INFO - Command exited with return code 0
+[2025-10-31T18:25:21.823+0100] {taskinstance.py:441} INFO - ::group::Post task execution logs
+[2025-10-31T18:25:21.876+0100] {taskinstance.py:1206} INFO - Marking task as SUCCESS. dag_id=avito_kafka_every_5min, task_id=run_avito_producer, run_id=scheduled__2025-10-31T17:20:00+00:00, execution_date=20251031T172000, start_date=20251031T172500, end_date=20251031T172521
+[2025-10-31T18:25:21.912+0100] {local_task_job_runner.py:243} INFO - Task exited with return code 0
+[2025-10-31T18:25:21.935+0100] {taskinstance.py:3503} INFO - 0 downstream tasks scheduled from follow-on schedule check
+[2025-10-31T18:25:21.937+0100] {local_task_job_runner.py:222} INFO - ::endgroup::

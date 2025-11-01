@@ -1,0 +1,36 @@
+[2025-11-01T00:54:44.953+0100] {local_task_job_runner.py:120} INFO - ::group::Pre task execution logs
+[2025-11-01T00:54:44.996+0100] {taskinstance.py:2076} INFO - Dependencies all met for dep_context=non-requeueable deps ti=<TaskInstance: avito_minimal_scrape_to_iceberg.run_scraper manual__2025-10-31T23:54:06+00:00 [queued]>
+[2025-11-01T00:54:45.009+0100] {taskinstance.py:2076} INFO - Dependencies all met for dep_context=requeueable deps ti=<TaskInstance: avito_minimal_scrape_to_iceberg.run_scraper manual__2025-10-31T23:54:06+00:00 [queued]>
+[2025-11-01T00:54:45.010+0100] {taskinstance.py:2306} INFO - Starting attempt 1 of 3
+[2025-11-01T00:54:45.028+0100] {taskinstance.py:2330} INFO - Executing <Task(BashOperator): run_scraper> on 2025-10-31 23:54:06+00:00
+[2025-11-01T00:54:45.036+0100] {standard_task_runner.py:90} INFO - Running: ['***', 'tasks', 'run', 'avito_minimal_scrape_to_iceberg', 'run_scraper', 'manual__2025-10-31T23:54:06+00:00', '--job-id', '122', '--raw', '--subdir', 'DAGS_FOLDER/avito_pipeline.py', '--cfg-path', '/tmp/tmpiskgrdzp']
+[2025-11-01T00:54:45.040+0100] {standard_task_runner.py:91} INFO - Job 122: Subtask run_scraper
+[2025-11-01T00:54:45.041+0100] {logging_mixin.py:188} WARNING - /home/***/.local/lib/python3.12/site-packages/***/task/task_runner/standard_task_runner.py:62 DeprecationWarning: This process (pid=854) is multi-threaded, use of fork() may lead to deadlocks in the child.
+[2025-11-01T00:54:45.043+0100] {standard_task_runner.py:64} INFO - Started process 855 to run task
+[2025-11-01T00:54:45.140+0100] {task_command.py:426} INFO - Running <TaskInstance: avito_minimal_scrape_to_iceberg.run_scraper manual__2025-10-31T23:54:06+00:00 [running]> on host 840b98c7ef92
+[2025-11-01T00:54:45.327+0100] {taskinstance.py:2648} INFO - Exporting env vars: AIRFLOW_CTX_DAG_OWNER='avito' AIRFLOW_CTX_DAG_ID='avito_minimal_scrape_to_iceberg' AIRFLOW_CTX_TASK_ID='run_scraper' AIRFLOW_CTX_EXECUTION_DATE='2025-10-31T23:54:06+00:00' AIRFLOW_CTX_TRY_NUMBER='1' AIRFLOW_CTX_DAG_RUN_ID='manual__2025-10-31T23:54:06+00:00'
+[2025-11-01T00:54:45.328+0100] {taskinstance.py:430} INFO - ::endgroup::
+[2025-11-01T00:54:45.354+0100] {subprocess.py:63} INFO - Tmp dir root location: /tmp
+[2025-11-01T00:54:45.356+0100] {subprocess.py:75} INFO - Running command: ['/usr/bin/bash', '-c', 'docker exec -i avito-scraper bash -lc "/app/run_avito_scraper.sh --mode louer --pages 1 --limit 10 --bootstrap kafka:9092 --topic realestate.avito.raw"']
+[2025-11-01T00:54:45.380+0100] {subprocess.py:86} INFO - Output:
+[2025-11-01T00:54:46.435+0100] {subprocess.py:93} INFO - [*] Mode: LOUER | Pages: 1 | Sink: kafka | Limit: 10
+[2025-11-01T00:54:46.436+0100] {subprocess.py:93} INFO - [SERP] Page 1 → https://www.avito.ma/fr/maroc/locations_immobilieres-à_louer
+[2025-11-01T00:54:47.072+0100] {subprocess.py:93} INFO -        Reached limit 10, stopping SERP crawl
+[2025-11-01T00:54:47.076+0100] {subprocess.py:93} INFO - [*] Total URLs: 10
+[2025-11-01T00:54:47.078+0100] {subprocess.py:93} INFO - [1/10] https://www.avito.ma/fr/sonaba/bureaux/À_louer_plateau_bureau_neuf_a_Agadir_Bay_de_166_m2_57125289.htm
+[2025-11-01T00:54:48.931+0100] {subprocess.py:93} INFO - [2/10] https://www.avito.ma/fr/massira/appartements/Appartement_meublé_à_louer_à_Al_Massira_Miami_H_Y_M_4500DH_57131560.htm
+[2025-11-01T00:54:50.768+0100] {subprocess.py:93} INFO - [3/10] https://www.avito.ma/fr/targa/villas_et_riads/Location_belle_Maison_55105755.htm
+[2025-11-01T00:54:52.527+0100] {subprocess.py:93} INFO - [4/10] https://www.avito.ma/fr/marjane/appartements/Appartement_à_louer_Mojama3_Hassani_57146726.htm
+[2025-11-01T00:54:54.418+0100] {subprocess.py:93} INFO - [5/10] https://www.avito.ma/fr/centre_ville/appartements/Appartement_meublé_à_louer_mensuellement_au_centre_ville_57146724.htm
+[2025-11-01T00:54:56.237+0100] {subprocess.py:93} INFO - [6/10] https://www.avito.ma/fr/c.i.l/appartements/Location_appart_vide_CIL_près_Institut_Dominique_57131214.htm
+[2025-11-01T00:54:58.341+0100] {subprocess.py:93} INFO - [7/10] https://www.avito.ma/fr/autre_secteur/local/Magasin_110m_Avenue_Tarik_Bno_Ziyad_56982951.htm
+[2025-11-01T00:55:00.361+0100] {subprocess.py:93} INFO - [8/10] https://www.avito.ma/fr/centre_ville/appartements/Appartement_meublé_au_centre_ville_57146722.htm
+[2025-11-01T00:55:02.211+0100] {subprocess.py:93} INFO - [9/10] https://www.avito.ma/fr/safir/appartements/Appartement_à_louer_140_m²_à_Tétouan_57146720.htm
+[2025-11-01T00:55:03.988+0100] {subprocess.py:93} INFO - [10/10] https://www.avito.ma/fr/belvédère/appartements/Appartement_meublé_à_louer_quartier_Belvedere_57069850.htm
+[2025-11-01T00:55:04.279+0100] {subprocess.py:93} INFO - [✓] Sent 10 messages to Kafka topic 'realestate.avito.raw'
+[2025-11-01T00:55:04.346+0100] {subprocess.py:97} INFO - Command exited with return code 0
+[2025-11-01T00:55:04.348+0100] {taskinstance.py:441} INFO - ::group::Post task execution logs
+[2025-11-01T00:55:04.392+0100] {taskinstance.py:1206} INFO - Marking task as SUCCESS. dag_id=avito_minimal_scrape_to_iceberg, task_id=run_scraper, run_id=manual__2025-10-31T23:54:06+00:00, execution_date=20251031T235406, start_date=20251031T235444, end_date=20251031T235504
+[2025-11-01T00:55:04.446+0100] {local_task_job_runner.py:243} INFO - Task exited with return code 0
+[2025-11-01T00:55:04.469+0100] {taskinstance.py:3503} INFO - 0 downstream tasks scheduled from follow-on schedule check
+[2025-11-01T00:55:04.472+0100] {local_task_job_runner.py:222} INFO - ::endgroup::

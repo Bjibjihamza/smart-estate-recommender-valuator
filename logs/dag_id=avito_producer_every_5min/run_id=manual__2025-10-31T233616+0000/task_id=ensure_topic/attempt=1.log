@@ -1,0 +1,22 @@
+[2025-11-01T00:48:16.330+0100] {local_task_job_runner.py:120} INFO - ::group::Pre task execution logs
+[2025-11-01T00:48:16.380+0100] {taskinstance.py:2076} INFO - Dependencies all met for dep_context=non-requeueable deps ti=<TaskInstance: avito_producer_every_5min.ensure_topic manual__2025-10-31T23:36:16+00:00 [queued]>
+[2025-11-01T00:48:16.391+0100] {taskinstance.py:2076} INFO - Dependencies all met for dep_context=requeueable deps ti=<TaskInstance: avito_producer_every_5min.ensure_topic manual__2025-10-31T23:36:16+00:00 [queued]>
+[2025-11-01T00:48:16.392+0100] {taskinstance.py:2306} INFO - Starting attempt 1 of 3
+[2025-11-01T00:48:16.408+0100] {taskinstance.py:2330} INFO - Executing <Task(BashOperator): ensure_topic> on 2025-10-31 23:36:16+00:00
+[2025-11-01T00:48:16.418+0100] {standard_task_runner.py:90} INFO - Running: ['***', 'tasks', 'run', 'avito_producer_every_5min', 'ensure_topic', 'manual__2025-10-31T23:36:16+00:00', '--job-id', '108', '--raw', '--subdir', 'DAGS_FOLDER/avito_pipeline.py', '--cfg-path', '/tmp/tmps4ra49iw']
+[2025-11-01T00:48:16.421+0100] {standard_task_runner.py:91} INFO - Job 108: Subtask ensure_topic
+[2025-11-01T00:48:16.422+0100] {logging_mixin.py:188} WARNING - /home/***/.local/lib/python3.12/site-packages/***/task/task_runner/standard_task_runner.py:62 DeprecationWarning: This process (pid=608) is multi-threaded, use of fork() may lead to deadlocks in the child.
+[2025-11-01T00:48:16.424+0100] {standard_task_runner.py:64} INFO - Started process 609 to run task
+[2025-11-01T00:48:16.484+0100] {task_command.py:426} INFO - Running <TaskInstance: avito_producer_every_5min.ensure_topic manual__2025-10-31T23:36:16+00:00 [running]> on host 840b98c7ef92
+[2025-11-01T00:48:16.586+0100] {taskinstance.py:2648} INFO - Exporting env vars: AIRFLOW_CTX_DAG_OWNER='avito' AIRFLOW_CTX_DAG_ID='avito_producer_every_5min' AIRFLOW_CTX_TASK_ID='ensure_topic' AIRFLOW_CTX_EXECUTION_DATE='2025-10-31T23:36:16+00:00' AIRFLOW_CTX_TRY_NUMBER='1' AIRFLOW_CTX_DAG_RUN_ID='manual__2025-10-31T23:36:16+00:00'
+[2025-11-01T00:48:16.590+0100] {taskinstance.py:430} INFO - ::endgroup::
+[2025-11-01T00:48:16.630+0100] {subprocess.py:63} INFO - Tmp dir root location: /tmp
+[2025-11-01T00:48:16.637+0100] {subprocess.py:75} INFO - Running command: ['/usr/bin/bash', '-c', 'docker exec -i kafka bash -lc "kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists --topic realestate.avito.raw --partitions 1 --replication-factor 1"']
+[2025-11-01T00:48:16.653+0100] {subprocess.py:86} INFO - Output:
+[2025-11-01T00:48:18.395+0100] {subprocess.py:93} INFO - WARNING: Due to limitations in metric names, topics with a period ('.') or underscore ('_') could collide. To avoid issues it is best to use either, but not both.
+[2025-11-01T00:48:19.554+0100] {subprocess.py:97} INFO - Command exited with return code 0
+[2025-11-01T00:48:19.555+0100] {taskinstance.py:441} INFO - ::group::Post task execution logs
+[2025-11-01T00:48:19.595+0100] {taskinstance.py:1206} INFO - Marking task as SUCCESS. dag_id=avito_producer_every_5min, task_id=ensure_topic, run_id=manual__2025-10-31T23:36:16+00:00, execution_date=20251031T233616, start_date=20251031T234816, end_date=20251031T234819
+[2025-11-01T00:48:19.621+0100] {local_task_job_runner.py:243} INFO - Task exited with return code 0
+[2025-11-01T00:48:19.656+0100] {taskinstance.py:3503} INFO - 1 downstream tasks scheduled from follow-on schedule check
+[2025-11-01T00:48:19.662+0100] {local_task_job_runner.py:222} INFO - ::endgroup::
