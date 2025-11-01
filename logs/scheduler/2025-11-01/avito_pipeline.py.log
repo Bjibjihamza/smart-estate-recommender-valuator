@@ -67,3 +67,65 @@
 [2025-11-01T01:04:50.158+0100] {logging_mixin.py:188} INFO - [2025-11-01T01:04:50.158+0100] {dag.py:3089} INFO - Sync 1 DAGs
 [2025-11-01T01:04:50.197+0100] {logging_mixin.py:188} INFO - [2025-11-01T01:04:50.197+0100] {dag.py:3947} INFO - Setting next_dagrun for avito_minimal_scrape_to_iceberg to 2025-11-01 00:00:00+00:00, run_after=2025-11-01 00:05:00+00:00
 [2025-11-01T01:04:50.220+0100] {processor.py:183} INFO - Processing /opt/airflow/dags/avito_pipeline.py took 0.124 seconds
+[2025-11-01T01:05:20.327+0100] {processor.py:161} INFO - Started process (PID=1166) to work on /opt/airflow/dags/avito_pipeline.py
+[2025-11-01T01:05:20.328+0100] {processor.py:830} INFO - Processing file /opt/airflow/dags/avito_pipeline.py for tasks to queue
+[2025-11-01T01:05:20.330+0100] {logging_mixin.py:188} INFO - [2025-11-01T01:05:20.330+0100] {dagbag.py:545} INFO - Filling up the DagBag from /opt/airflow/dags/avito_pipeline.py
+[2025-11-01T01:05:20.352+0100] {processor.py:840} INFO - DAG(s) 'avito_minimal_scrape_to_iceberg' retrieved from /opt/airflow/dags/avito_pipeline.py
+[2025-11-01T01:05:20.401+0100] {logging_mixin.py:188} INFO - [2025-11-01T01:05:20.401+0100] {dag.py:3089} INFO - Sync 1 DAGs
+[2025-11-01T01:05:20.448+0100] {processor.py:183} INFO - Processing /opt/airflow/dags/avito_pipeline.py took 0.129 seconds
+[2025-11-01T01:05:50.623+0100] {processor.py:161} INFO - Started process (PID=1171) to work on /opt/airflow/dags/avito_pipeline.py
+[2025-11-01T01:05:50.624+0100] {processor.py:830} INFO - Processing file /opt/airflow/dags/avito_pipeline.py for tasks to queue
+[2025-11-01T01:05:50.626+0100] {logging_mixin.py:188} INFO - [2025-11-01T01:05:50.625+0100] {dagbag.py:545} INFO - Filling up the DagBag from /opt/airflow/dags/avito_pipeline.py
+[2025-11-01T01:05:50.648+0100] {processor.py:840} INFO - DAG(s) 'avito_minimal_scrape_to_iceberg' retrieved from /opt/airflow/dags/avito_pipeline.py
+[2025-11-01T01:05:50.688+0100] {logging_mixin.py:188} INFO - [2025-11-01T01:05:50.688+0100] {dag.py:3089} INFO - Sync 1 DAGs
+[2025-11-01T01:05:50.712+0100] {logging_mixin.py:188} INFO - [2025-11-01T01:05:50.712+0100] {dag.py:3947} INFO - Setting next_dagrun for avito_minimal_scrape_to_iceberg to 2025-11-01 00:05:00+00:00, run_after=2025-11-01 00:10:00+00:00
+[2025-11-01T01:05:50.731+0100] {processor.py:183} INFO - Processing /opt/airflow/dags/avito_pipeline.py took 0.116 seconds
+[2025-11-01T01:06:20.866+0100] {processor.py:161} INFO - Started process (PID=1176) to work on /opt/airflow/dags/avito_pipeline.py
+[2025-11-01T01:06:20.867+0100] {processor.py:830} INFO - Processing file /opt/airflow/dags/avito_pipeline.py for tasks to queue
+[2025-11-01T01:06:20.869+0100] {logging_mixin.py:188} INFO - [2025-11-01T01:06:20.869+0100] {dagbag.py:545} INFO - Filling up the DagBag from /opt/airflow/dags/avito_pipeline.py
+[2025-11-01T01:06:20.889+0100] {processor.py:840} INFO - DAG(s) 'avito_minimal_scrape_to_iceberg' retrieved from /opt/airflow/dags/avito_pipeline.py
+[2025-11-01T01:06:20.922+0100] {logging_mixin.py:188} INFO - [2025-11-01T01:06:20.922+0100] {dag.py:3089} INFO - Sync 1 DAGs
+[2025-11-01T01:06:20.946+0100] {logging_mixin.py:188} INFO - [2025-11-01T01:06:20.946+0100] {dag.py:3947} INFO - Setting next_dagrun for avito_minimal_scrape_to_iceberg to 2025-11-01 00:05:00+00:00, run_after=2025-11-01 00:10:00+00:00
+[2025-11-01T01:06:20.964+0100] {processor.py:183} INFO - Processing /opt/airflow/dags/avito_pipeline.py took 0.104 seconds
+[2025-11-01T01:06:51.159+0100] {processor.py:161} INFO - Started process (PID=1181) to work on /opt/airflow/dags/avito_pipeline.py
+[2025-11-01T01:06:51.160+0100] {processor.py:830} INFO - Processing file /opt/airflow/dags/avito_pipeline.py for tasks to queue
+[2025-11-01T01:06:51.162+0100] {logging_mixin.py:188} INFO - [2025-11-01T01:06:51.162+0100] {dagbag.py:545} INFO - Filling up the DagBag from /opt/airflow/dags/avito_pipeline.py
+[2025-11-01T01:06:51.182+0100] {processor.py:840} INFO - DAG(s) 'avito_minimal_scrape_to_iceberg' retrieved from /opt/airflow/dags/avito_pipeline.py
+[2025-11-01T01:06:51.220+0100] {logging_mixin.py:188} INFO - [2025-11-01T01:06:51.220+0100] {dag.py:3089} INFO - Sync 1 DAGs
+[2025-11-01T01:06:51.253+0100] {logging_mixin.py:188} INFO - [2025-11-01T01:06:51.253+0100] {dag.py:3947} INFO - Setting next_dagrun for avito_minimal_scrape_to_iceberg to 2025-11-01 00:05:00+00:00, run_after=2025-11-01 00:10:00+00:00
+[2025-11-01T01:06:51.276+0100] {processor.py:183} INFO - Processing /opt/airflow/dags/avito_pipeline.py took 0.124 seconds
+[2025-11-01T01:07:21.379+0100] {processor.py:161} INFO - Started process (PID=1186) to work on /opt/airflow/dags/avito_pipeline.py
+[2025-11-01T01:07:21.380+0100] {processor.py:830} INFO - Processing file /opt/airflow/dags/avito_pipeline.py for tasks to queue
+[2025-11-01T01:07:21.382+0100] {logging_mixin.py:188} INFO - [2025-11-01T01:07:21.382+0100] {dagbag.py:545} INFO - Filling up the DagBag from /opt/airflow/dags/avito_pipeline.py
+[2025-11-01T01:07:21.407+0100] {processor.py:840} INFO - DAG(s) 'avito_minimal_scrape_to_iceberg' retrieved from /opt/airflow/dags/avito_pipeline.py
+[2025-11-01T01:07:21.445+0100] {logging_mixin.py:188} INFO - [2025-11-01T01:07:21.445+0100] {dag.py:3089} INFO - Sync 1 DAGs
+[2025-11-01T01:07:21.475+0100] {logging_mixin.py:188} INFO - [2025-11-01T01:07:21.475+0100] {dag.py:3947} INFO - Setting next_dagrun for avito_minimal_scrape_to_iceberg to 2025-11-01 00:05:00+00:00, run_after=2025-11-01 00:10:00+00:00
+[2025-11-01T01:07:21.499+0100] {processor.py:183} INFO - Processing /opt/airflow/dags/avito_pipeline.py took 0.128 seconds
+[2025-11-01T01:07:51.671+0100] {processor.py:161} INFO - Started process (PID=1191) to work on /opt/airflow/dags/avito_pipeline.py
+[2025-11-01T01:07:51.672+0100] {processor.py:830} INFO - Processing file /opt/airflow/dags/avito_pipeline.py for tasks to queue
+[2025-11-01T01:07:51.674+0100] {logging_mixin.py:188} INFO - [2025-11-01T01:07:51.674+0100] {dagbag.py:545} INFO - Filling up the DagBag from /opt/airflow/dags/avito_pipeline.py
+[2025-11-01T01:07:51.694+0100] {processor.py:840} INFO - DAG(s) 'avito_minimal_scrape_to_iceberg' retrieved from /opt/airflow/dags/avito_pipeline.py
+[2025-11-01T01:07:51.727+0100] {logging_mixin.py:188} INFO - [2025-11-01T01:07:51.726+0100] {dag.py:3089} INFO - Sync 1 DAGs
+[2025-11-01T01:07:51.754+0100] {logging_mixin.py:188} INFO - [2025-11-01T01:07:51.754+0100] {dag.py:3947} INFO - Setting next_dagrun for avito_minimal_scrape_to_iceberg to 2025-11-01 00:05:00+00:00, run_after=2025-11-01 00:10:00+00:00
+[2025-11-01T01:07:51.775+0100] {processor.py:183} INFO - Processing /opt/airflow/dags/avito_pipeline.py took 0.110 seconds
+[2025-11-01T01:08:21.926+0100] {processor.py:161} INFO - Started process (PID=1196) to work on /opt/airflow/dags/avito_pipeline.py
+[2025-11-01T01:08:21.926+0100] {processor.py:830} INFO - Processing file /opt/airflow/dags/avito_pipeline.py for tasks to queue
+[2025-11-01T01:08:21.929+0100] {logging_mixin.py:188} INFO - [2025-11-01T01:08:21.929+0100] {dagbag.py:545} INFO - Filling up the DagBag from /opt/airflow/dags/avito_pipeline.py
+[2025-11-01T01:08:21.950+0100] {processor.py:840} INFO - DAG(s) 'avito_minimal_scrape_to_iceberg' retrieved from /opt/airflow/dags/avito_pipeline.py
+[2025-11-01T01:08:21.988+0100] {logging_mixin.py:188} INFO - [2025-11-01T01:08:21.988+0100] {dag.py:3089} INFO - Sync 1 DAGs
+[2025-11-01T01:08:22.016+0100] {logging_mixin.py:188} INFO - [2025-11-01T01:08:22.016+0100] {dag.py:3947} INFO - Setting next_dagrun for avito_minimal_scrape_to_iceberg to 2025-11-01 00:05:00+00:00, run_after=2025-11-01 00:10:00+00:00
+[2025-11-01T01:08:22.037+0100] {processor.py:183} INFO - Processing /opt/airflow/dags/avito_pipeline.py took 0.118 seconds
+[2025-11-01T01:08:52.193+0100] {processor.py:161} INFO - Started process (PID=1201) to work on /opt/airflow/dags/avito_pipeline.py
+[2025-11-01T01:08:52.194+0100] {processor.py:830} INFO - Processing file /opt/airflow/dags/avito_pipeline.py for tasks to queue
+[2025-11-01T01:08:52.197+0100] {logging_mixin.py:188} INFO - [2025-11-01T01:08:52.197+0100] {dagbag.py:545} INFO - Filling up the DagBag from /opt/airflow/dags/avito_pipeline.py
+[2025-11-01T01:08:52.229+0100] {processor.py:840} INFO - DAG(s) 'avito_minimal_scrape_to_iceberg' retrieved from /opt/airflow/dags/avito_pipeline.py
+[2025-11-01T01:08:52.286+0100] {logging_mixin.py:188} INFO - [2025-11-01T01:08:52.286+0100] {dag.py:3089} INFO - Sync 1 DAGs
+[2025-11-01T01:08:52.321+0100] {logging_mixin.py:188} INFO - [2025-11-01T01:08:52.321+0100] {dag.py:3947} INFO - Setting next_dagrun for avito_minimal_scrape_to_iceberg to 2025-11-01 00:05:00+00:00, run_after=2025-11-01 00:10:00+00:00
+[2025-11-01T01:08:52.349+0100] {processor.py:183} INFO - Processing /opt/airflow/dags/avito_pipeline.py took 0.167 seconds
+[2025-11-01T01:09:22.495+0100] {processor.py:161} INFO - Started process (PID=1206) to work on /opt/airflow/dags/avito_pipeline.py
+[2025-11-01T01:09:22.497+0100] {processor.py:830} INFO - Processing file /opt/airflow/dags/avito_pipeline.py for tasks to queue
+[2025-11-01T01:09:22.499+0100] {logging_mixin.py:188} INFO - [2025-11-01T01:09:22.499+0100] {dagbag.py:545} INFO - Filling up the DagBag from /opt/airflow/dags/avito_pipeline.py
+[2025-11-01T01:09:22.522+0100] {processor.py:840} INFO - DAG(s) 'avito_minimal_scrape_to_iceberg' retrieved from /opt/airflow/dags/avito_pipeline.py
+[2025-11-01T01:09:22.565+0100] {logging_mixin.py:188} INFO - [2025-11-01T01:09:22.564+0100] {dag.py:3089} INFO - Sync 1 DAGs
+[2025-11-01T01:09:22.600+0100] {logging_mixin.py:188} INFO - [2025-11-01T01:09:22.600+0100] {dag.py:3947} INFO - Setting next_dagrun for avito_minimal_scrape_to_iceberg to 2025-11-01 00:05:00+00:00, run_after=2025-11-01 00:10:00+00:00
+[2025-11-01T01:09:22.626+0100] {processor.py:183} INFO - Processing /opt/airflow/dags/avito_pipeline.py took 0.137 seconds
