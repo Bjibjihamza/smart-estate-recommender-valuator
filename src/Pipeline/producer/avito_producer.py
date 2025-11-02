@@ -1,12 +1,14 @@
+#!/usr/bin/env python3
 # Run:
 #   python -m Pipeline.producer.avito_producer --mode louer --pages 1 \
 #     --bootstrap kafka:9092 --topic realestate.avito.raw --limit 5
+
 import argparse
 from Pipeline.extract.avito_scraper import run_job
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--mode", choices=["louer","vendre","acheter"], default="louer")
+    ap.add_argument("--mode", choices=["louer", "vendre", "acheter"], default="louer")
     ap.add_argument("--pages", type=int, default=1)
     ap.add_argument("--limit", type=int, default=None)
     ap.add_argument("--bootstrap", default="kafka:9092")

@@ -36,16 +36,14 @@ This repository provides a complete Docker Compose setup with:
 ## 🚀 Quick Start
 
 ### 1. Clone the Repository
-
 ```bash
-git clone <YOUR_REPO_URL>
+git clone <repository-url>
 cd smart-estate-recommender-valuator
 ```
 
 ### 2. Configure Environment
 
 Create a `.env` file in the repository root:
-
 ```env
 # MinIO Configuration
 MINIO_ROOT_USER=admin
@@ -66,18 +64,97 @@ MINIO_CONSOLE_PORT=9001
 ```
 
 ### 3. Build and Start Services
-
 ```bash
 docker compose up -d --build
 ```
 
-Wait for all services to become healthy:
-- ✅ Kafka is healthy
-- ✅ MinIO is healthy
-- ✅ Airflow web & scheduler are running
-- ✅ Spark-Iceberg worker is running
+Wait 2-3 minutes for all services to become healthy. Verify with:
+```bash
+docker ps
+```
 
-### 4. Access the UIs
+You should see all containers running:
+- ✅ kafka (healthy)
+- ✅ minio (healthy)
+- ✅ iceberg-rest
+- ✅ spark-iceberg
+- ✅ avito-scraper
+- ✅ airflow-db (healthy)
+- ✅ airflow-web
+- ✅ airflow-scheduler
+
+### 4. Create Airflow Admin User (First Time Only)
+```bash
+docker exec -it airflow-web bash -lc "airflow users create \
+  --username admin \
+  --password admin \
+  --firstname Admin \
+  --lastname User \
+  --role Admin \
+  --email admin@example.com"
+```
+
+**Note:** If you get "User already exists", skip this step.
+
+### 5. Create Iceberg Table
+```bash
+docker exec -it spark-iceberg bash -lc "mkdir -p /opt/work/logs /opt/work/checkpoints/avito_raw"
+```
+```bash
+docker exec -it spark-iceberg /opt/spark/bin/spark-sql \
+  --conf spark.sql.extensions=org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions \
+  --conf spark.sql.catalog.rest=org.apache.iceberg.spark.SparkCatalog \
+  --conf spark.sql.catalog.rest.catalog-impl=org.apache.iceberg.rest.RESTCatalog \
+  --conf spark.sql.catalog.rest.uri=http://iceberg-rest:8181 \
+  --conf spark.sql.catalog.rest.warehouse=s3://lake/warehouse \
+  --conf spark.sql.catalog.rest.io-impl=org.apache.iceberg.aws.s3.S3FileIO \
+  --conf spark.sql.catalog.rest.s3.endpoint=http://minio:9000 \
+  --conf spark.sql.catalog.rest.s3.path-style-access=true \
+  --conf spark.sql.catalog.rest.s3.access-key-id=admin \
+  --conf spark.sql.catalog.rest.s3.secret-access-key=admin123 \
+  --conf spark.sql.defaultCatalog=rest \
+  -e "CREATE NAMESPACE IF NOT EXISTS rest.raw; CREATE TABLE IF NOT EXISTS rest.raw.avito (id STRING, payload STRING, ingest_ts TIMESTAMP) USING iceberg PARTITIONED BY (days(ingest_ts)) TBLPROPERTIES ('write.distribution-mode'='none', 'format-version'='2');"
+```
+
+**Expected output:** Should complete without errors (warnings are OK).
+
+### 6. Start Kafka → Iceberg Streaming Sink (Background Service)
+```bash
+docker exec -d spark-iceberg bash -c "nohup /opt/spark/bin/spark-submit \
+  --conf spark.sql.extensions=org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions \
+  --conf spark.sql.catalog.rest=org.apache.iceberg.spark.SparkCatalog \
+  --conf spark.sql.catalog.rest.catalog-impl=org.apache.iceberg.rest.RESTCatalog \
+  --conf spark.sql.catalog.rest.uri=http://iceberg-rest:8181 \
+  --conf spark.sql.catalog.rest.warehouse=s3://lake/warehouse \
+  --conf spark.sql.catalog.rest.io-impl=org.apache.iceberg.aws.s3.S3FileIO \
+  --conf spark.sql.catalog.rest.s3.endpoint=http://minio:9000 \
+  --conf spark.sql.catalog.rest.s3.path-style-access=true \
+  --conf spark.sql.catalog.rest.s3.access-key-id=admin \
+  --conf spark.sql.catalog.rest.s3.secret-access-key=admin123 \
+  --conf spark.sql.defaultCatalog=rest \
+  /opt/work/src/Pipeline/load/iceberg_kafka_sink.py \
+  --kafka-bootstrap kafka:9092 \
+  --topic realestate.avito.raw \
+  --table rest.raw.avito \
+  --checkpoint file:///opt/work/checkpoints/avito_raw \
+  --starting-offsets latest \
+  --trigger '15 seconds' \
+  > /opt/work/logs/avito_sink.log 2>&1 &"
+```
+
+**Verify it's running:**
+```bash
+docker exec -it spark-iceberg ps aux | grep spark-submit
+```
+
+You should see a process running `iceberg_kafka_sink.py`.
+
+**Check logs:**
+```bash
+docker exec -it spark-iceberg tail -30 /opt/work/logs/avito_sink.log
+```
+
+### 7. Access the UIs
 
 | Service | URL | Credentials |
 |---------|-----|-------------|
@@ -85,6 +162,77 @@ Wait for all services to become healthy:
 | **Kafka UI** | http://localhost:8090 | - |
 | **MinIO Console** | http://localhost:9001 | admin / admin123 |
 | **Iceberg REST** | http://localhost:8181 | (service endpoint) |
+
+### 8. Enable & Run the Scraper DAG
+
+1. Open Airflow UI: http://localhost:8088
+2. Login with: **admin / admin**
+3. Find DAG: `avito_scraper`
+4. Toggle the DAG to **ON** (switch on left)
+5. Click **▶ Trigger DAG** to run immediately
+
+**Monitor progress:** Click on the DAG run → Graph view → Click task → View logs
+
+---
+
+## 🔄 Restart Procedure (After `docker compose down`)
+
+If you stop and restart the stack, follow these steps:
+
+### 1. Start Services
+```bash
+docker compose up -d
+```
+
+### 2. Verify Iceberg Table Exists
+```bash
+docker exec -it spark-iceberg /opt/spark/bin/spark-sql \
+  --conf spark.sql.catalog.rest=org.apache.iceberg.spark.SparkCatalog \
+  --conf spark.sql.catalog.rest.catalog-impl=org.apache.iceberg.rest.RESTCatalog \
+  --conf spark.sql.catalog.rest.uri=http://iceberg-rest:8181 \
+  --conf spark.sql.catalog.rest.warehouse=s3://lake/warehouse \
+  --conf spark.sql.catalog.rest.io-impl=org.apache.iceberg.aws.s3.S3FileIO \
+  --conf spark.sql.catalog.rest.s3.endpoint=http://minio:9000 \
+  --conf spark.sql.catalog.rest.s3.path-style-access=true \
+  --conf spark.sql.catalog.rest.s3.access-key-id=admin \
+  --conf spark.sql.catalog.rest.s3.secret-access-key=admin123 \
+  --conf spark.sql.defaultCatalog=rest \
+  -e "SHOW TABLES IN rest.raw;"
+```
+
+**Expected:** Should list `avito` table. If not, recreate it (see Step 5 above).
+
+### 3. Restart Streaming Sink
+```bash
+# Kill any existing sink processes
+docker exec -it spark-iceberg pkill -f iceberg_kafka_sink.py
+
+# Start fresh (same command as Step 6 above)
+docker exec -d spark-iceberg bash -c "nohup /opt/spark/bin/spark-submit \
+  --conf spark.sql.extensions=org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions \
+  --conf spark.sql.catalog.rest=org.apache.iceberg.spark.SparkCatalog \
+  --conf spark.sql.catalog.rest.catalog-impl=org.apache.iceberg.rest.RESTCatalog \
+  --conf spark.sql.catalog.rest.uri=http://iceberg-rest:8181 \
+  --conf spark.sql.catalog.rest.warehouse=s3://lake/warehouse \
+  --conf spark.sql.catalog.rest.io-impl=org.apache.iceberg.aws.s3.S3FileIO \
+  --conf spark.sql.catalog.rest.s3.endpoint=http://minio:9000 \
+  --conf spark.sql.catalog.rest.s3.path-style-access=true \
+  --conf spark.sql.catalog.rest.s3.access-key-id=admin \
+  --conf spark.sql.catalog.rest.s3.secret-access-key=admin123 \
+  --conf spark.sql.defaultCatalog=rest \
+  /opt/work/src/Pipeline/load/iceberg_kafka_sink.py \
+  --kafka-bootstrap kafka:9092 \
+  --topic realestate.avito.raw \
+  --table rest.raw.avito \
+  --checkpoint file:///opt/work/checkpoints/avito_raw \
+  --starting-offsets latest \
+  --trigger '15 seconds' \
+  > /opt/work/logs/avito_sink.log 2>&1 &"
+```
+
+### 4. Resume DAG in Airflow
+
+The DAG should auto-resume. If paused, toggle it ON in Airflow UI.
 
 ---
 
