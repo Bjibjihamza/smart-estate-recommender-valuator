@@ -27,3 +27,6 @@ src/**/warehouse/
 Thumbs.db
 .vscode/
 .idea/
+
+__pycache__/
+*.pyc
