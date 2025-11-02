@@ -91,13 +91,7 @@ You should see all containers running:
 ### 4. Create Airflow Admin User (First Time Only)
 
 ```bash
-docker exec -it airflow-web airflow users create \
-  --username admin \
-  --password admin \
-  --firstname Admin \
-  --lastname User \
-  --role Admin \
-  --email admin@example.com
+docker exec -it airflow-web airflow users create --username admin --firstname Admin --lastname User --role Admin --email admin@example.com --password admin
 ```
 
 **Note:** If you get "User already exists", skip this step.
@@ -113,29 +107,7 @@ docker exec -it spark-iceberg mkdir -p /opt/work/logs /opt/work/checkpoints/avit
 **Step 5b: Create table**
 
 ```bash
-docker exec -it spark-iceberg /opt/spark/bin/spark-sql \
-  --conf spark.sql.extensions=org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions \
-  --conf spark.sql.catalog.rest=org.apache.iceberg.spark.SparkCatalog \
-  --conf spark.sql.catalog.rest.catalog-impl=org.apache.iceberg.rest.RESTCatalog \
-  --conf spark.sql.catalog.rest.uri=http://iceberg-rest:8181 \
-  --conf spark.sql.catalog.rest.warehouse=s3://lake/warehouse \
-  --conf spark.sql.catalog.rest.io-impl=org.apache.iceberg.aws.s3.S3FileIO \
-  --conf spark.sql.catalog.rest.s3.endpoint=http://minio:9000 \
-  --conf spark.sql.catalog.rest.s3.path-style-access=true \
-  --conf spark.sql.catalog.rest.s3.access-key-id=admin \
-  --conf spark.sql.catalog.rest.s3.secret-access-key=admin123 \
-  --conf spark.sql.defaultCatalog=rest \
-  -e "CREATE NAMESPACE IF NOT EXISTS rest.raw; \
-      CREATE TABLE IF NOT EXISTS rest.raw.avito ( \
-        id STRING, \
-        payload STRING, \
-        ingest_ts TIMESTAMP \
-      ) USING iceberg \
-      PARTITIONED BY (days(ingest_ts)) \
-      TBLPROPERTIES ( \
-        'write.distribution-mode'='none', \
-        'format-version'='2' \
-      );"
+docker exec -it spark-iceberg /opt/spark/bin/spark-sql --conf spark.sql.extensions=org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions --conf spark.sql.catalog.rest=org.apache.iceberg.spark.SparkCatalog --conf spark.sql.catalog.rest.catalog-impl=org.apache.iceberg.rest.RESTCatalog --conf spark.sql.catalog.rest.uri=http://iceberg-rest:8181 --conf spark.sql.catalog.rest.warehouse=s3://lake/warehouse --conf spark.sql.catalog.rest.io-impl=org.apache.iceberg.aws.s3.S3FileIO --conf spark.sql.catalog.rest.s3.endpoint=http://minio:9000 --conf spark.sql.catalog.rest.s3.path-style-access=true --conf spark.sql.catalog.rest.s3.access-key-id=admin --conf spark.sql.catalog.rest.s3.secret-access-key=admin123 --conf spark.sql.defaultCatalog=rest -e "CREATE NAMESPACE IF NOT EXISTS raw; CREATE TABLE IF NOT EXISTS raw.avito (id STRING, payload STRING, ingest_ts TIMESTAMP) USING iceberg PARTITIONED BY (days(ingest_ts)) TBLPROPERTIES ('write.distribution-mode'='none','format-version'='2');"
 ```
 
 **Expected output:** Should complete without errors (warnings like "NativeCodeLoader" are OK).
@@ -143,26 +115,7 @@ docker exec -it spark-iceberg /opt/spark/bin/spark-sql \
 ### 6. Start Kafka → Iceberg Streaming Sink
 
 ```bash
-docker exec -d spark-iceberg bash -c "nohup /opt/spark/bin/spark-submit \
-  --conf spark.sql.extensions=org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions \
-  --conf spark.sql.catalog.rest=org.apache.iceberg.spark.SparkCatalog \
-  --conf spark.sql.catalog.rest.catalog-impl=org.apache.iceberg.rest.RESTCatalog \
-  --conf spark.sql.catalog.rest.uri=http://iceberg-rest:8181 \
-  --conf spark.sql.catalog.rest.warehouse=s3://lake/warehouse \
-  --conf spark.sql.catalog.rest.io-impl=org.apache.iceberg.aws.s3.S3FileIO \
-  --conf spark.sql.catalog.rest.s3.endpoint=http://minio:9000 \
-  --conf spark.sql.catalog.rest.s3.path-style-access=true \
-  --conf spark.sql.catalog.rest.s3.access-key-id=admin \
-  --conf spark.sql.catalog.rest.s3.secret-access-key=admin123 \
-  --conf spark.sql.defaultCatalog=rest \
-  /opt/work/src/Pipeline/load/iceberg_kafka_sink.py \
-  --kafka-bootstrap kafka:9092 \
-  --topic realestate.avito.raw \
-  --table rest.raw.avito \
-  --checkpoint file:///opt/work/checkpoints/avito_raw \
-  --starting-offsets latest \
-  --trigger '15 seconds' \
-  > /opt/work/logs/avito_sink.log 2>&1 &"
+docker exec -d spark-iceberg bash -c "nohup /opt/spark/bin/spark-submit --conf spark.sql.extensions=org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions --conf spark.sql.catalog.rest=org.apache.iceberg.spark.SparkCatalog --conf spark.sql.catalog.rest.catalog-impl=org.apache.iceberg.rest.RESTCatalog --conf spark.sql.catalog.rest.uri=http://iceberg-rest:8181 --conf spark.sql.catalog.rest.warehouse=s3://lake/warehouse --conf spark.sql.catalog.rest.io-impl=org.apache.iceberg.aws.s3.S3FileIO --conf spark.sql.catalog.rest.s3.endpoint=http://minio:9000 --conf spark.sql.catalog.rest.s3.path-style-access=true --conf spark.sql.catalog.rest.s3.access-key-id=admin --conf spark.sql.catalog.rest.s3.secret-access-key=admin123 --conf spark.sql.defaultCatalog=rest /opt/work/src/Pipeline/load/iceberg_kafka_sink.py --kafka-bootstrap kafka:9092 --topic realestate.avito.raw --table rest.raw.avito --checkpoint file:///opt/work/checkpoints/avito_raw --starting-offsets latest --trigger '15 seconds' > /opt/work/logs/avito_sink.log 2>&1 &"
 ```
 
 **Verify it's running:**
@@ -275,28 +228,15 @@ The DAG should auto-resume. If paused, toggle it ON in Airflow UI.
 ### Check Kafka Messages
 
 ```bash
-docker exec -it kafka kafka-console-consumer \
-  --bootstrap-server kafka:9092 \
-  --topic realestate.avito.raw \
-  --from-beginning \
-  --max-messages 1
+docker exec -it kafka kafka-console-consumer --bootstrap-server kafka:9092 --topic realestate.avito.raw --from-beginning --max-messages 1
+
 ```
 
 ### Check Iceberg Table Data
 
 ```bash
-docker exec -it spark-iceberg /opt/spark/bin/spark-sql \
-  --conf spark.sql.catalog.rest=org.apache.iceberg.spark.SparkCatalog \
-  --conf spark.sql.catalog.rest.catalog-impl=org.apache.iceberg.rest.RESTCatalog \
-  --conf spark.sql.catalog.rest.uri=http://iceberg-rest:8181 \
-  --conf spark.sql.catalog.rest.warehouse=s3://lake/warehouse \
-  --conf spark.sql.catalog.rest.io-impl=org.apache.iceberg.aws.s3.S3FileIO \
-  --conf spark.sql.catalog.rest.s3.endpoint=http://minio:9000 \
-  --conf spark.sql.catalog.rest.s3.path-style-access=true \
-  --conf spark.sql.catalog.rest.s3.access-key-id=admin \
-  --conf spark.sql.catalog.rest.s3.secret-access-key=admin123 \
-  --conf spark.sql.defaultCatalog=rest \
-  -e "SELECT COUNT(*) FROM rest.raw.avito;"
+docker exec -it spark-iceberg /opt/spark/bin/spark-sql --conf spark.sql.catalog.rest=org.apache.iceberg.spark.SparkCatalog --conf spark.sql.catalog.rest.catalog-impl=org.apache.iceberg.rest.RESTCatalog --conf spark.sql.catalog.rest.uri=http://iceberg-rest:8181 --conf spark.sql.catalog.rest.warehouse=s3://lake/warehouse --conf spark.sql.catalog.rest.io-impl=org.apache.iceberg.aws.s3.S3FileIO --conf spark.sql.catalog.rest.s3.endpoint=http://minio:9000 --conf spark.sql.catalog.rest.s3.path-style-access=true --conf spark.sql.catalog.rest.s3.access-key-id=admin --conf spark.sql.catalog.rest.s3.secret-access-key=admin123 --conf spark.sql.defaultCatalog=rest -e "SELECT COUNT(*) FROM rest.raw.avito;"
+
 ```
 
 You should see a count > 0 if data is flowing.
