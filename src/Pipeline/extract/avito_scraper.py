@@ -2,6 +2,7 @@
 import csv, re, time, json, argparse
 from typing import Any, Dict, List, Optional
 from urllib.parse import urljoin, urlparse, parse_qs, urlencode, urlunparse
+from datetime import datetime, timedelta
 import requests
 from bs4 import BeautifulSoup
 from confluent_kafka import Producer
@@ -44,6 +45,42 @@ def text_or_none(el) -> Optional[str]:
 def get_id_from_url(url: str) -> Optional[str]:
     m = ID_RE.search(url)
     return m.group(1) if m else None
+
+# ---------- Convert relative time to absolute date ----------
+def parse_relative_date(text: str, scrape_time: datetime) -> Optional[str]:
+    """
+    Convertit 'il y a X minutes/heures/jours/mois/ans' en date absolue ISO format
+    """
+    if not text:
+        return None
+    
+    text_lower = text.lower().strip()
+    
+    # Extract number
+    num_match = re.search(r'(\d+)', text_lower)
+    if not num_match:
+        return scrape_time.strftime("%Y-%m-%d %H:%M:%S")
+    
+    num = int(num_match.group(1))
+    
+    # Determine time unit
+    if 'minute' in text_lower:
+        delta = timedelta(minutes=num)
+    elif 'heure' in text_lower:
+        delta = timedelta(hours=num)
+    elif 'jour' in text_lower:
+        delta = timedelta(days=num)
+    elif 'semaine' in text_lower:
+        delta = timedelta(weeks=num)
+    elif 'mois' in text_lower:
+        delta = timedelta(days=num * 30)  # approximation
+    elif 'an' in text_lower or 'année' in text_lower:
+        delta = timedelta(days=num * 365)  # approximation
+    else:
+        return scrape_time.strftime("%Y-%m-%d %H:%M:%S")
+    
+    absolute_date = scrape_time - delta
+    return absolute_date.strftime("%Y-%m-%d %H:%M:%S")
 
 # ---------- SERP ----------
 def extract_listings_from_serp(html: str) -> List[str]:
@@ -121,7 +158,7 @@ def extract_attributes_json(soup: BeautifulSoup) -> Dict[str, Any]:
     return attributes
 
 # ---------- details ----------
-def extract_from_dom(soup: BeautifulSoup) -> Dict[str, Any]:
+def extract_from_dom(soup: BeautifulSoup, scrape_time: datetime) -> Dict[str, Any]:
     out: Dict[str, Any] = {}
     out["title"] = text_or_none(soup.select_one("h1.sc-9ca53b09-5"))
     out["price_text"] = text_or_none(soup.select_one("p.sc-9ca53b09-10"))
@@ -144,8 +181,14 @@ def extract_from_dom(soup: BeautifulSoup) -> Dict[str, Any]:
 
     out["seller_name"] = text_or_none(soup.select_one("p.sc-1l0do2b-9"))
     out["seller_type"] = "Boutique" if soup.select_one('svg[aria-labelledby*="ShopBadge"]') else "Particulier"
+    
+    # Extract and convert relative date to absolute
     time_el = soup.select_one("time")
-    out["published_date"] = text_or_none(time_el.parent) if time_el else None
+    if time_el:
+        relative_text = text_or_none(time_el.parent)
+        out["published_date"] = parse_relative_date(relative_text, scrape_time)
+    else:
+        out["published_date"] = None
 
     imgs = []
     for img in soup.select("div.slick-slide img[src]"):
@@ -161,12 +204,13 @@ def extract_from_dom(soup: BeautifulSoup) -> Dict[str, Any]:
     return out
 
 def parse_property(url: str, i: int) -> Dict[str, Any]:
+    scrape_time = datetime.now()
     out: Dict[str, Any] = {"id": get_id_from_url(url), "url": url, "error": None}
     try:
         resp = requests.get(url, headers=pick_headers(i), timeout=30)
         resp.raise_for_status()
         soup = BeautifulSoup(resp.text, "lxml")
-        out.update(extract_from_dom(soup))
+        out.update(extract_from_dom(soup, scrape_time))
     except Exception as e:
         out["error"] = str(e)
     return out
