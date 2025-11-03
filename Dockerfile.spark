@@ -1,4 +1,4 @@
-# Dockerfile.spark
+# Dockerfile.spark  (fixed)
 FROM apache/spark:3.5.1
 
 # ---- base tools ----
@@ -14,47 +14,40 @@ RUN apt-get update \
 RUN update-alternatives --install /usr/bin/python python /usr/bin/python3 1 && \
     update-alternatives --install /usr/bin/pip pip /usr/bin/pip3 1
 
-# ---- Python deps (pin confluent-kafka to a wheel; no source build) ----
+# ---- Python deps (no need to pip-install pyspark; it's in the base image) ----
 RUN python -m pip install --upgrade pip setuptools wheel && \
     pip install --no-cache-dir \
       jupyterlab==4.* notebook==7.* ipykernel \
       pandas pyarrow boto3 s3fs minio && \
-    pip install --no-cache-dir --only-binary=:all: confluent-kafka==2.6.0 && \
-    pip install --no-cache-dir pyspark==3.5.1
-
+    pip install --no-cache-dir --only-binary=:all: confluent-kafka==2.6.0
 
 # Register kernel (optional)
 RUN python -m ipykernel install --name python3 --display-name "Python 3 (container)"
 
-# ---- Iceberg + Kafka JARs ----
+# ---- JARs: Iceberg + Kafka + required transitive deps ----
+# Keep versions consistent: Spark 3.5.1 (Scala 2.12), Kafka clients 3.5.1, Iceberg 1.6.0 (or 1.5.0 everywhere)
 RUN mkdir -p /opt/spark/jars && cd /opt/spark/jars \
  && curl -fsSLO https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-spark-runtime-3.5_2.12/1.6.0/iceberg-spark-runtime-3.5_2.12-1.6.0.jar \
- && curl -fsSLO https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-aws-bundle/1.6.0/iceberg-aws-bundle-1.6.0.jar
+ && curl -fsSLO https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-aws-bundle/1.6.0/iceberg-aws-bundle-1.6.0.jar \
+ && curl -fsSLO https://repo1.maven.org/maven2/org/apache/spark/spark-sql-kafka-0-10_2.12/3.5.1/spark-sql-kafka-0-10_2.12-3.5.1.jar \
+ && curl -fsSLO https://repo1.maven.org/maven2/org/apache/spark/spark-token-provider-kafka-0-10_2.12/3.5.1/spark-token-provider-kafka-0-10_2.12-3.5.1.jar \
+ && curl -fsSLO https://repo1.maven.org/maven2/org/apache/kafka/kafka-clients/3.5.1/kafka-clients-3.5.1.jar \
+ && curl -fsSLO https://repo1.maven.org/maven2/org/apache/commons/commons-pool2/2.11.1/commons-pool2-2.11.1.jar \
+ && curl -fsSLO https://repo1.maven.org/maven2/org/lz4/lz4-java/1.8.0/lz4-java-1.8.0.jar \
+ && curl -fsSLO https://repo1.maven.org/maven2/org/xerial/snappy/snappy-java/1.1.10.5/snappy-java-1.1.10.5.jar
 
-# Spark Structured Streaming Kafka connector (Spark 3.5.1, Scala 2.12)
-# Keep versions aligned with Spark 3.5.1 (Kafka clients 3.5.1)
-RUN set -e; cd /opt/spark/jars && \
-    curl -fsSLO https://repo1.maven.org/maven2/org/apache/spark/spark-sql-kafka-0-10_2.12/3.5.1/spark-sql-kafka-0-10_2.12-3.5.1.jar && \
-    curl -fsSLO https://repo1.maven.org/maven2/org/apache/spark/spark-token-provider-kafka-0-10_2.12/3.5.1/spark-token-provider-kafka-0-10_2.12-3.5.1.jar && \
-    curl -fsSLO https://repo1.maven.org/maven2/org/apache/kafka/kafka-clients/3.5.1/kafka-clients-3.5.1.jar && \
-    curl -fsSLO https://repo1.maven.org/maven2/org/lz4/lz4-java/1.8.0/lz4-java-1.8.0.jar && \
-    curl -fsSLO https://repo1.maven.org/maven2/org/xerial/snappy/snappy-java/1.1.10.5/snappy-java-1.1.10.5.jar
-
-# (Optional) If you later want Hadoop S3 (not needed for Iceberg S3FileIO),
-# you can add hadoop-aws and aws-java-sdk-bundle here.
+# (Tip) Do NOT add slf4j-api/commons-logging jars here; Spark ships compatible versions.
 
 # ---- Workspace & permissions ----
 RUN mkdir -p /opt/work && chown -R spark:spark /opt/work /opt/spark/jars
 WORKDIR /opt/work
 
-
-# Ensure workspace & Jupyter dirs exist and are writable
 RUN mkdir -p /opt/work/.jupyter/runtime /opt/work/notebooks /opt/work/src /opt/work/data \
  && chown -R spark:spark /opt/work /opt/spark/jars
+
 ENV HOME=/opt/work \
     JUPYTER_RUNTIME_DIR=/opt/work/.jupyter/runtime \
     JUPYTER_DATA_DIR=/opt/work/.jupyter \
     JUPYTER_CONFIG_DIR=/opt/work/.jupyter
-
 
 USER spark

@@ -73,6 +73,8 @@ with DAG(
 
     # Transform the latest 30 minutes window → Silver (append)
     # We compute the window using Airflow data_interval_end
+# dags/avito_pipeline.py
+
     transform_to_silver = BashOperator(
         task_id="transform_to_silver",
         bash_command=(
@@ -81,8 +83,8 @@ with DAG(
             "/opt/spark/bin/spark-submit --master local[*] "
             "/opt/work/src/Pipeline/transform/avito_raw_to_silver.py "
             "--catalog rest --mode append "
-            "--since {{ (data_interval_end - macros.timedelta(minutes=30)).isoformat() }} "
-            "--until {{ data_interval_end.isoformat() }}'"
+            "--since {{ (ts_nodash_with_tz | ts_to_datetime - macros.timedelta(minutes=35)) | ts }} "
+            "--until {{ ts }}'"
         ),
     )
 
