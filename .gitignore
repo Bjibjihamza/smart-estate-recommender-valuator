@@ -30,3 +30,12 @@ Thumbs.db
 
 __pycache__/
 *.pyc
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+src/.Trash-*/
+src/notebooks/exported_*/
+*.parquet
+*.crc
+_SUCCESS
+.DS_Store
