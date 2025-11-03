@@ -17,7 +17,6 @@ This repository provides a complete Docker Compose setup with:
 * **Spark** worker with Iceberg + AWS SDK integration
 * **Avito Scraper** container (Python requests/BeautifulSoup4)
 * **Airflow** (web server + scheduler + PostgreSQL) with automated DAG:
-
   * Ensures Kafka topic exists
   * Maintains streaming Spark job
   * Executes scraper every 5 minutes
@@ -29,7 +28,6 @@ This repository provides a complete Docker Compose setup with:
 * **Docker** & **Docker Compose** installed
 * **~4 GB RAM** available
 * **Required ports** free:
-
   * `8088` — Airflow web UI
   * `8090` — Kafka UI
   * `9000` — MinIO API
@@ -97,6 +95,7 @@ Expected running containers:
 ✅ airflow-db
 ✅ airflow-web
 ✅ airflow-scheduler
+✅ avito-scraper
 
 ---
 
@@ -108,27 +107,111 @@ docker exec -it airflow-web airflow users create \
   --role Admin --email admin@example.com --password admin
 ```
 
-If “User already exists”, skip this step.
+If "User already exists", skip this step.
 
 ---
 
-## 🧊 Create Iceberg Table
+## 🧊 Create Iceberg Tables & Namespaces
 
-### a. Create directories
+We use Python scripts to create the Iceberg namespaces and tables programmatically. This approach is cleaner and more maintainable than manual SQL commands.
 
-```bash
-docker exec -it spark-iceberg mkdir -p /opt/work/logs /opt/work/checkpoints/avito_raw
+### 📁 Table Structure
+
+```
+rest/
+├── raw/
+│   └── avito (id, payload, ingest_ts)  ← Raw JSON data from Kafka
+└── silver/
+    └── avito (31 columns)              ← Cleaned & structured data
 ```
 
-### b. Create table
+### a. Create RAW Layer
+
+The **raw** layer stores the original JSON payload from Kafka with minimal processing.
+
+**Schema:**
+- `id` (STRING) — Listing ID
+- `payload` (STRING) — Raw JSON document
+- `ingest_ts` (TIMESTAMP) — Ingestion timestamp
+- **Partitioned by:** `days(ingest_ts)`
+
+**Run:**
 
 ```bash
-docker exec -it spark-iceberg /opt/spark/bin/spark-sql --conf spark.sql.extensions=org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions --conf spark.sql.catalog.rest=org.apache.iceberg.spark.SparkCatalog --conf spark.sql.catalog.rest.catalog-impl=org.apache.iceberg.rest.RESTCatalog --conf spark.sql.catalog.rest.uri=http://iceberg-rest:8181 --conf spark.sql.catalog.rest.warehouse=s3://lake/warehouse --conf spark.sql.catalog.rest.io-impl=org.apache.iceberg.aws.s3.S3FileIO --conf spark.sql.catalog.rest.s3.endpoint=http://minio:9000 --conf spark.sql.catalog.rest.s3.path-style-access=true --conf spark.sql.catalog.rest.s3.access-key-id=admin --conf spark.sql.catalog.rest.s3.secret-access-key=admin123 --conf spark.sql.defaultCatalog=rest -e "CREATE NAMESPACE IF NOT EXISTS raw; CREATE TABLE IF NOT EXISTS raw.avito (id STRING, payload STRING, ingest_ts TIMESTAMP) USING iceberg PARTITIONED BY (days(ingest_ts)) TBLPROPERTIES ('write.distribution-mode'='none','format-version'='2');"
+docker exec -it spark-iceberg bash -lc "
+/opt/spark/bin/spark-submit \
+  --master local[*] \
+  /opt/work/src/database/raw.py
+"
+```
+
+**Expected output:**
+```
+============================================================
+Creating Raw Layer in Iceberg
+============================================================
+[INFO] Creating namespace 'raw' if not exists...
+[INFO] Creating table 'raw.avito' with schema...
+[SUCCESS] Raw namespace and table created successfully!
+```
+
+### b. Create SILVER Layer
+
+The **silver** layer contains cleaned, structured, and enriched data ready for analytics.
+
+**Schema (31 columns):**
+- Core fields: `id`, `url`, `title`, `price`, `description`
+- Seller info: `seller_name`, `seller_type`
+- Location: `city`, `neighborhood`, `site`
+- Metadata: `offre`, `type`, `published_date`, `ingest_ts`
+- Arrays: `image_urls`, `equipments`
+- Property attributes: `Surface habitable`, `Chambres`, `Étage`, etc.
+- **Partitioned by:** `days(ingest_ts)`
+
+**Run:**
+
+```bash
+docker exec -it spark-iceberg bash -lc "
+/opt/spark/bin/spark-submit \
+  --master local[*] \
+  /opt/work/src/database/silver.py
+"
+```
+
+**Expected output:**
+```
+============================================================
+Creating Silver Layer in Iceberg
+============================================================
+[INFO] Creating namespace 'silver' if not exists...
+[INFO] Creating table 'silver.avito' with schema...
+[SUCCESS] Silver namespace and table created successfully!
++---------+---------+-----------+
+|namespace|tableName|isTemporary|
++---------+---------+-----------+
+|silver   |avito    |false      |
++---------+---------+-----------+
+```
+
+### c. Verify Tables Creation
+
+```bash
+docker exec -it spark-iceberg /opt/spark/bin/spark-sql \
+  --conf spark.sql.catalog.rest=org.apache.iceberg.spark.SparkCatalog \
+  --conf spark.sql.catalog.rest.uri=http://iceberg-rest:8181 \
+  --conf spark.sql.catalog.rest.warehouse=s3://lake/warehouse \
+  --conf spark.sql.catalog.rest.io-impl=org.apache.iceberg.aws.s3.S3FileIO \
+  --conf spark.sql.catalog.rest.s3.endpoint=http://minio:9000 \
+  --conf spark.sql.catalog.rest.s3.access-key-id=admin \
+  --conf spark.sql.catalog.rest.s3.secret-access-key=admin123 \
+  -e "SHOW NAMESPACES IN rest; SHOW TABLES IN rest.raw; SHOW TABLES IN rest.silver;"
 ```
 
 ---
 
 ## 🔁 Start Kafka → Iceberg Streaming Sink
+
+This streaming job continuously reads from Kafka and writes to the **raw.avito** table.
 
 ```bash
 docker exec -d spark-iceberg bash -c "nohup /opt/spark/bin/spark-submit \
@@ -153,10 +236,16 @@ docker exec -d spark-iceberg bash -c "nohup /opt/spark/bin/spark-submit \
   > /opt/work/logs/avito_sink.log 2>&1 &"
 ```
 
-Check it’s running:
+Check it's running:
 
 ```bash
 docker exec -it spark-iceberg ps aux | grep spark-submit
+```
+
+View logs:
+
+```bash
+docker exec -it spark-iceberg tail -f /opt/work/logs/avito_sink.log
 ```
 
 ---
@@ -183,7 +272,7 @@ docker exec -it kafka kafka-console-consumer \
   --from-beginning --max-messages 1
 ```
 
-### Check Iceberg Table Data
+### Check RAW Table Data
 
 ```bash
 docker exec -it spark-iceberg /opt/spark/bin/spark-sql \
@@ -197,17 +286,31 @@ docker exec -it spark-iceberg /opt/spark/bin/spark-sql \
   -e "SELECT COUNT(*) FROM rest.raw.avito;"
 ```
 
+### Check SILVER Table (After Transformation)
+
+```bash
+docker exec -it spark-iceberg /opt/spark/bin/spark-sql \
+  --conf spark.sql.catalog.rest=org.apache.iceberg.spark.SparkCatalog \
+  --conf spark.sql.catalog.rest.uri=http://iceberg-rest:8181 \
+  --conf spark.sql.catalog.rest.warehouse=s3://lake/warehouse \
+  --conf spark.sql.catalog.rest.io-impl=org.apache.iceberg.aws.s3.S3FileIO \
+  --conf spark.sql.catalog.rest.s3.endpoint=http://minio:9000 \
+  --conf spark.sql.catalog.rest.s3.access-key-id=admin \
+  --conf spark.sql.catalog.rest.s3.secret-access-key=admin123 \
+  -e "SELECT id, title, price, city, offre FROM rest.silver.avito LIMIT 10;"
+```
+
 ---
 
 ## 🧠 Exploratory Data Analysis (EDA — Silver Dataset)
 
-A new **JupyterLab environment** is integrated for interactive data exploration and preparation before building **Silver** tables.
+A **JupyterLab environment** is integrated for interactive data exploration and preparation before building **Silver** tables.
 
 ### 📘 Notebook Environment
 
 * **Container:** `spark-notebook`
 * **URL:** [http://localhost:8888/lab?token=serv](http://localhost:8888/lab?token=serv)
-* **Workspace:** `/opt/work/notebooks/init_iceberg.ipynb`
+* **Workspace:** `/opt/work/notebooks/`
 
 ### ⚙️ Configuration
 
@@ -222,21 +325,14 @@ The JupyterLab image includes:
   JUPYTER_TOKEN=serv
   ```
 
-### 🧩 Default Setup
-
-* Dependencies installed automatically during build
-* Notebook copied to `/opt/work/notebooks`
-* Runtime & data directory at `/opt/work/.jupyter`
-
-Access it through the browser or VSCode Remote Jupyter connection.
-
-### 🧪 Example Initialization
+### 🧪 Example: Connect to Iceberg
 
 ```python
 from pyspark.sql import SparkSession
 
 spark = (
     SparkSession.builder.appName("Iceberg via REST")
+    .config("spark.sql.extensions", "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions")
     .config("spark.sql.catalog.local", "org.apache.iceberg.spark.SparkCatalog")
     .config("spark.sql.catalog.local.catalog-impl", "org.apache.iceberg.rest.RESTCatalog")
     .config("spark.sql.catalog.local.uri", "http://iceberg-rest:8181")
@@ -249,17 +345,14 @@ spark = (
     .getOrCreate()
 )
 
+# Load raw data
 raw_df = spark.table("local.raw.avito")
+raw_df.show(5)
 
-# Initialize minimal Silver dataset
-silver_df = raw_df.select("id").distinct()
-silver_df.show(5)
-
-print("✅ Silver dataset initialized with only 'id' column.")
-print("Total IDs:", silver_df.count())
+# Load silver data
+silver_df = spark.table("local.silver.avito")
+silver_df.printSchema()
 ```
-
-This initializes the **Silver dataset** (only unique IDs) for future enrichment, cleansing, and analytics.
 
 Access shell if needed:
 
@@ -271,27 +364,57 @@ docker exec -it spark-notebook bash
 
 ## 📊 Pipeline DAG
 
-**File:** `dags/avito_pipeline.py`
+**File:** `dags/avito_scraper.py`
 **Schedule:** Every 5 minutes
 
 ### DAG Tasks
 
-1. **Create Kafka Topic** — ensures topic exists
-2. **Ensure Spark Streaming Sink** — submits streaming job
-3. **Run Scraper** — extracts & pushes new Avito listings
+1. **Choose Mode** — Alternates between `louer` (rent) and `acheter` (buy)
+2. **Run Scraper** — Extracts & pushes new Avito listings to Kafka
+3. **Done** — Marks completion
+
+The DAG automatically alternates between scraping rental and sale listings on each run.
 
 ---
 
 ## 🛠️ Troubleshooting
 
-Common issues and solutions are documented for:
+### Restart Streaming Sink
 
-* Kafka producer paths
-* S3/Iceberg permissions
-* Missing DAGs
-* Restarting Spark streaming sinks
+If the streaming job stops:
 
-(See original Troubleshooting section for full commands.)
+```bash
+# Kill existing process
+docker exec -it spark-iceberg pkill -f iceberg_kafka_sink
+
+# Restart (use command from section above)
+docker exec -d spark-iceberg bash -c "nohup /opt/spark/bin/spark-submit ..."
+```
+
+### Check Logs
+
+```bash
+# Streaming sink logs
+docker exec -it spark-iceberg tail -f /opt/work/logs/avito_sink.log
+
+# Airflow logs
+docker logs airflow-scheduler -f
+
+# Spark logs
+docker logs spark-iceberg -f
+```
+
+### Recreate Tables
+
+If you need to drop and recreate tables:
+
+```bash
+docker exec -it spark-iceberg /opt/spark/bin/spark-sql \
+  --conf spark.sql.catalog.rest.uri=http://iceberg-rest:8181 \
+  -e "DROP TABLE IF EXISTS rest.raw.avito; DROP TABLE IF EXISTS rest.silver.avito;"
+
+# Then run the creation scripts again
+```
 
 ---
 
@@ -300,18 +423,65 @@ Common issues and solutions are documented for:
 ```
 smart-estate-recommender-valuator/
 ├── dags/
-│   └── avito_pipeline.py
+│   └── avito_scraper.py           # Airflow DAG for orchestration
 ├── src/
+│   ├── database/                  # Table creation scripts
+│   │   ├── raw.py                 # Creates rest.raw.avito
+│   │   └── silver.py              # Creates rest.silver.avito
 │   ├── notebooks/                 # Jupyter EDA workspace
 │   └── Pipeline/
 │       ├── extract/
+│       │   └── avito_scraper.py   # Web scraper logic
 │       ├── producer/
+│       │   └── avito_producer.py  # Kafka producer
 │       └── load/
-├── Dockerfile
-├── Dockerfile.spark
-├── docker-compose.yml
-├── .env
+│           └── iceberg_kafka_sink.py  # Streaming sink
+├── Dockerfile                     # Scraper container
+├── Dockerfile.spark               # Spark + Iceberg container
+├── docker-compose.yml             # Full stack definition
+├── .env                           # Environment variables
 └── README.md
+```
+
+---
+
+## 🎓 Data Pipeline Architecture
+
+```
+┌──────────────┐
+│ Avito.ma     │
+│ (Web Source) │
+└──────┬───────┘
+       │ HTTP Requests
+       ↓
+┌──────────────────┐
+│ Python Scraper   │  ← Airflow scheduled (every 5 min)
+│ (BeautifulSoup4) │
+└──────┬───────────┘
+       │ JSON Messages
+       ↓
+┌──────────────────┐
+│ Kafka Topic      │  ← realestate.avito.raw
+│ (KRaft Mode)     │
+└──────┬───────────┘
+       │ Streaming Read
+       ↓
+┌──────────────────┐
+│ Spark Structured │  ← Continuous micro-batches (15s)
+│ Streaming        │
+└──────┬───────────┘
+       │ Write
+       ↓
+┌──────────────────┐
+│ Iceberg REST     │  ← rest.raw.avito (partitioned)
+│ Catalog + MinIO  │
+└──────┬───────────┘
+       │ Transform
+       ↓
+┌──────────────────┐
+│ Silver Layer     │  ← rest.silver.avito (cleaned)
+│ (31 columns)     │
+└──────────────────┘
 ```
 
 ---
