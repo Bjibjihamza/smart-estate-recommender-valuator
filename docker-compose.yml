@@ -1,6 +1,7 @@
-name: avito-dev
+name: serv
 
 services:
+
   # ---------- KAFKA (KRaft, no ZooKeeper) ----------
   kafka:
     image: confluentinc/cp-kafka:7.6.1
@@ -264,8 +265,7 @@ services:
 
 
 
-
-# ---------- SPARK (one-shot runner with Iceberg + Kafka) ----------
+  # spark-iceberg builds the image ONCE
   spark-iceberg:
     build:
       context: .
@@ -286,6 +286,37 @@ services:
     volumes:
       - ./src:/opt/work/src:rw
     command: bash -lc "sleep infinity"
+
+  # spark-notebook reuses the image (NO build block)
+  spark-notebook:
+    image: spark-iceberg:local
+    container_name: spark-notebook
+    depends_on:
+      spark-iceberg:
+        condition: service_started
+    environment:
+      AWS_ACCESS_KEY_ID: admin
+      AWS_SECRET_ACCESS_KEY: admin123
+      AWS_REGION: us-east-1
+      PYSPARK_PYTHON: python
+      HOME: /opt/work
+      JUPYTER_RUNTIME_DIR: /opt/work/.jupyter/runtime
+      JUPYTER_DATA_DIR: /opt/work/.jupyter
+      JUPYTER_CONFIG_DIR: /opt/work/.jupyter
+      JUPYTER_TOKEN: ${JUPYTER_TOKEN:-serv}
+    command: >
+      bash -lc "mkdir -p /opt/work/.jupyter/runtime /opt/work/notebooks /opt/work/src /opt/work/data &&
+                jupyter lab --ip=0.0.0.0 --port=8888
+                --ServerApp.token=$JUPYTER_TOKEN
+                --ServerApp.password=''
+                --no-browser"
+    ports:
+      - "8888:8888"
+    volumes:
+      - ./src:/opt/work/src:rw
+      - ./data:/opt/work/data:rw
+      - ./src/notebooks:/opt/work/notebooks:rw
+
 
 
 
