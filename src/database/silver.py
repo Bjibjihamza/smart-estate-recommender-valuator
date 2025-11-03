@@ -40,42 +40,42 @@ def create_silver_table(spark: SparkSession):
     
     print("[INFO] Creating namespace 'silver' if not exists...")
     spark.sql("CREATE NAMESPACE IF NOT EXISTS rest.silver")
-    
+
     print("[INFO] Creating table 'silver.avito' with schema...")
     create_table_sql = """
     CREATE TABLE IF NOT EXISTS rest.silver.avito (
         id STRING,
         url STRING,
         title STRING,
-        price DOUBLE,
+        price DOUBLE NOT NULL,
         description STRING,
         seller_name STRING,
         seller_type STRING,
         image_urls ARRAY<STRING>,
         equipments ARRAY<STRING>,
         ingest_ts TIMESTAMP,
-        offre STRING,
-        type STRING,
+        offer STRING,
+        property_type STRING,
         city STRING,
         neighborhood STRING,
-        site STRING,
-        `Surface habitable` STRING,
-        `Caution` STRING,
-        `Zoning` STRING,
-        `Type d'appartement` STRING,
-        `Surface totale` STRING,
-        `Étage` STRING,
-        `Âge du bien` STRING,
-        `Salle de bain` STRING,
-        `Nombre de pièces` STRING,
-        `Chambres` STRING,
-        `Frais de syndic / mois` STRING,
-        `Condition` STRING,
-        `Nombre d'étage` STRING,
-        `Disponibilité` STRING,
-        `Salons` STRING,
-        `Standing` STRING,
-        published_date TIMESTAMP
+        site STRING NOT NULL,
+        published_date TIMESTAMP,
+        living_area STRING,
+        deposit STRING,
+        zoning STRING,
+        standing STRING,
+        total_area STRING,
+        floor STRING,
+        property_age STRING,
+        bathrooms STRING,
+        rooms STRING,
+        bedrooms STRING,
+        hoa_fee_per_month STRING,
+        condition STRING,
+        floors STRING,
+        availability STRING,
+        living_rooms STRING,
+        apartment_type STRING
     )
     USING iceberg
     PARTITIONED BY (days(ingest_ts))
@@ -128,10 +128,9 @@ def main():
 if __name__ == "__main__":
     main()
 
-
 # how to run 
 # docker exec -it spark-iceberg bash -lc "
 # /opt/spark/bin/spark-submit \
 #   --master local[*] \
 #   /opt/work/src/database/silver.py
-#  "
+# "
