@@ -75,16 +75,16 @@ with DAG(
     # We compute the window using Airflow data_interval_end
 # dags/avito_pipeline.py
 
+# Transform the latest 35 minutes → Silver (append)
     transform_to_silver = BashOperator(
         task_id="transform_to_silver",
         bash_command=(
             "docker exec -i spark-iceberg bash -lc "
             "'export PYTHONPATH=/opt/work/src && "
             "/opt/spark/bin/spark-submit --master local[*] "
-            "/opt/work/src/Pipeline/transform/avito_raw_to_silver.py "
+            "/opt/work/src/pipeline/transform/avito_raw_to_silver.py "
             "--catalog rest --mode append "
-            "--since {{ (ts_nodash_with_tz | ts_to_datetime - macros.timedelta(minutes=35)) | ts }} "
-            "--until {{ ts }}'"
+            "--fallback-window-mins 35'"
         ),
     )
 
