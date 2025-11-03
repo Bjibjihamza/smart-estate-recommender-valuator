@@ -275,15 +275,7 @@ docker exec -it kafka kafka-console-consumer \
 ### Check RAW Table Data
 
 ```bash
-docker exec -it spark-iceberg /opt/spark/bin/spark-sql \
-  --conf spark.sql.catalog.rest=org.apache.iceberg.spark.SparkCatalog \
-  --conf spark.sql.catalog.rest.uri=http://iceberg-rest:8181 \
-  --conf spark.sql.catalog.rest.warehouse=s3://lake/warehouse \
-  --conf spark.sql.catalog.rest.io-impl=org.apache.iceberg.aws.s3.S3FileIO \
-  --conf spark.sql.catalog.rest.s3.endpoint=http://minio:9000 \
-  --conf spark.sql.catalog.rest.s3.access-key-id=admin \
-  --conf spark.sql.catalog.rest.s3.secret-access-key=admin123 \
-  -e "SELECT COUNT(*) FROM rest.raw.avito;"
+docker exec -it spark-iceberg /opt/spark/bin/spark-sql --conf spark.sql.extensions=org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions --conf spark.sql.catalog.rest=org.apache.iceberg.spark.SparkCatalog --conf spark.sql.catalog.rest.catalog-impl=org.apache.iceberg.rest.RESTCatalog --conf spark.sql.catalog.rest.uri=http://iceberg-rest:8181 --conf spark.sql.catalog.rest.warehouse=s3://lake/warehouse --conf spark.sql.catalog.rest.io-impl=org.apache.iceberg.aws.s3.S3FileIO --conf spark.sql.catalog.rest.s3.endpoint=http://minio:9000 --conf spark.sql.catalog.rest.s3.path-style-access=true --conf spark.sql.catalog.rest.s3.access-key-id=admin --conf spark.sql.catalog.rest.s3.secret-access-key=admin123 --conf spark.sql.defaultCatalog=rest -S -e "SHOW NAMESPACES; SHOW TABLES IN rest.raw; SELECT COUNT(*) AS raw_rows FROM rest.raw.avito; SELECT COUNT(*) AS silver_rows FROM rest.silver.avito;"
 ```
 
 ### Check SILVER Table (After Transformation)
