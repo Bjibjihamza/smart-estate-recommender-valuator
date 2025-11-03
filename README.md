@@ -214,26 +214,8 @@ docker exec -it spark-iceberg /opt/spark/bin/spark-sql \
 This streaming job continuously reads from Kafka and writes to the **raw.avito** table.
 
 ```bash
-docker exec -d spark-iceberg bash -c "nohup /opt/spark/bin/spark-submit \
-  --conf spark.sql.extensions=org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions \
-  --conf spark.sql.catalog.rest=org.apache.iceberg.spark.SparkCatalog \
-  --conf spark.sql.catalog.rest.catalog-impl=org.apache.iceberg.rest.RESTCatalog \
-  --conf spark.sql.catalog.rest.uri=http://iceberg-rest:8181 \
-  --conf spark.sql.catalog.rest.warehouse=s3://lake/warehouse \
-  --conf spark.sql.catalog.rest.io-impl=org.apache.iceberg.aws.s3.S3FileIO \
-  --conf spark.sql.catalog.rest.s3.endpoint=http://minio:9000 \
-  --conf spark.sql.catalog.rest.s3.path-style-access=true \
-  --conf spark.sql.catalog.rest.s3.access-key-id=admin \
-  --conf spark.sql.catalog.rest.s3.secret-access-key=admin123 \
-  --conf spark.sql.defaultCatalog=rest \
-  /opt/work/src/Pipeline/load/iceberg_kafka_sink.py \
-  --kafka-bootstrap kafka:9092 \
-  --topic realestate.avito.raw \
-  --table rest.raw.avito \
-  --checkpoint file:///opt/work/checkpoints/avito_raw \
-  --starting-offsets latest \
-  --trigger '15 seconds' \
-  > /opt/work/logs/avito_sink.log 2>&1 &"
+docker exec -d spark-iceberg bash -c "nohup /opt/spark/bin/spark-submit --conf spark.sql.extensions=org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions --conf spark.sql.catalog.rest=org.apache.iceberg.spark.SparkCatalog --conf spark.sql.catalog.rest.catalog-impl=org.apache.iceberg.rest.RESTCatalog --conf spark.sql.catalog.rest.uri=http://iceberg-rest:8181 --conf spark.sql.catalog.rest.warehouse=s3://lake/warehouse --conf spark.sql.catalog.rest.io-impl=org.apache.iceberg.aws.s3.S3FileIO --conf spark.sql.catalog.rest.s3.endpoint=http://minio:9000 --conf spark.sql.catalog.rest.s3.path-style-access=true --conf spark.sql.catalog.rest.s3.access-key-id=admin --conf spark.sql.catalog.rest.s3.secret-access-key=admin123 --conf spark.sql.defaultCatalog=rest /opt/work/src/Pipeline/load/iceberg_kafka_sink.py --kafka-bootstrap kafka:9092 --topic realestate.avito.raw --table rest.raw.avito --checkpoint file:///opt/work/checkpoints/avito_raw --starting-offsets latest --trigger '15 seconds' > /opt/work/logs/avito_sink.log 2>&1 &"
+
 ```
 
 Check it's running:
