@@ -1,4 +1,4 @@
-# src/Pipeline/load/silver_loader.py
+# src/pipeline/load/silver_loader.py
 from pyspark.sql import DataFrame, SparkSession
 
 def write_to_silver(

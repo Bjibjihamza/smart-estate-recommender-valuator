@@ -12,7 +12,7 @@ from pyspark.sql import SparkSession
 from pyspark.sql import functions as F, types as T
 from pyspark.sql.window import Window
 
-from Pipeline.load.silver_loader import write_to_silver
+from pipeline.load.silver_loader import write_to_silver
 
 # ----------------------------
 # Spark / Iceberg config
