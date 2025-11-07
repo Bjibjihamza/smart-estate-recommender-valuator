@@ -1,4 +1,4 @@
-# src/Pipeline/load/silver_loader.py
+# src/pipeline/load/silver_loader.py
 from pyspark.sql import DataFrame, SparkSession
 
 def write_to_silver(
@@ -6,7 +6,7 @@ def write_to_silver(
     df: DataFrame,
     catalog: str = "rest",
     table: str = "silver.avito",
-    mode: str = "append",  # append | overwrite | dynamic_overwrite
+    mode: str = "append",
 ):
     """
     DataFrameWriterV2 to Iceberg table.

@@ -1,286 +1,242 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
 import argparse
-import re
-from datetime import datetime
-from unicodedata import normalize
-from functools import reduce
-from typing import Optional
+from datetime import timedelta
+from pyspark.sql import SparkSession, Window
+from pyspark.sql.functions import (
+    col, trim, lit, when, length, regexp_replace, from_json, split, size,
+    expr, array_position, element_at, coalesce, lower, row_number
+)
+from pyspark.sql.types import *
 
-from pyspark.sql import SparkSession
-from pyspark.sql import functions as F, types as T
-from pyspark.sql.window import Window
+UNIFIED_COLS = [
+    "id","url","error","ingest_ts","site","offre","price","title","seller",
+    "published_date","city","neighborhood","property_type","images","equipments",
+    "description_text","offre_match","surface_habitable","caution","zoning",
+    "type_d_appartement","standing","surface_totale","etage","age_du_bien",
+    "nombre_de_pieces","chambres","salle_de_bain","frais_de_syndic_mois",
+    "condition","nombre_d_etage","disponibilite","salons",
+    # Mubawab-specific that Avito doesn't have → NULLs
+    "features_amenities_json","type_de_bien","surface_de_la_parcelle",
+    "type_du_sol","etage_du_bien","annees","orientation","etat"
+]
 
-from Pipeline.load.silver_loader import write_to_silver
-
-# ----------------------------
-# Spark / Iceberg config
-# ----------------------------
-def build_spark(rest_uri: str, s3_endpoint: str, ak: str, sk: str, app_name="avito-raw-to-silver-modular") -> SparkSession:
+def build_spark():
     return (
-        SparkSession.builder
-        .appName(app_name)
-        .config("spark.sql.extensions", "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions")
-        .config("spark.sql.catalog.rest", "org.apache.iceberg.spark.SparkCatalog")
-        .config("spark.sql.catalog.rest.catalog-impl", "org.apache.iceberg.rest.RESTCatalog")
-        .config("spark.sql.defaultCatalog", "rest")
-        .config("spark.sql.catalog.rest.uri", rest_uri)
-        .config("spark.sql.catalog.rest.io-impl", "org.apache.iceberg.aws.s3.S3FileIO")
-        .config("spark.sql.catalog.rest.warehouse", "s3://lake/warehouse")
-        .config("spark.sql.catalog.rest.s3.endpoint", s3_endpoint)
-        .config("spark.sql.catalog.rest.s3.path-style-access", "true")
-        .config("spark.sql.catalog.rest.s3.access-key-id", ak)
-        .config("spark.sql.catalog.rest.s3.secret-access-key", sk)
+        SparkSession.builder.appName("avito_raw_to_silver")
+        .config("spark.sql.extensions","org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions")
+        .config("spark.sql.catalog.rest","org.apache.iceberg.spark.SparkCatalog")
+        .config("spark.sql.catalog.rest.type","rest")
+        .config("spark.sql.catalog.rest.uri","http://iceberg-rest:8181")
+        .config("spark.sql.catalog.rest.warehouse","s3://lake/warehouse")
+        .config("spark.sql.catalog.rest.io-impl","org.apache.iceberg.aws.s3.S3FileIO")
+        .config("spark.sql.catalog.rest.s3.endpoint","http://minio:9000")
+        .config("spark.sql.catalog.rest.s3.path-style-access","true")
+        .config("spark.sql.catalog.rest.s3.access-key-id","admin")
+        .config("spark.sql.catalog.rest.s3.secret-access-key","admin123")
+        .config("spark.sql.catalog.rest.s3.region","us-east-1")
         .getOrCreate()
     )
 
-# ----------------------------
-# Helpers
-# ----------------------------
-def _parse_iso8601(ts: str):
-    return datetime.fromisoformat(ts.replace("Z", "+00:00"))
-
-def to_snake_ascii(name: str) -> str:
-    ascii_name = normalize("NFKD", name).encode("ascii", "ignore").decode("ascii")
-    ascii_name = ascii_name.lower()
-    ascii_name = re.sub(r"[^a-z0-9]+", "_", ascii_name)
-    ascii_name = re.sub(r"_+", "_", ascii_name).strip("_")
-    return ascii_name
-
-def clean_equipments(eqs):
-    if eqs is None:
-        return []
-    out = []
-    for item in eqs:
-        s = "" if item is None else str(item)
-        if re.match(r"^\d+$", s):
-            continue
-        if re.search(r"(mois|an)", s, flags=re.IGNORECASE):
-            continue
-        out.append(s)
-    return out
-
-# ----------------------------
-# Transform
-# ----------------------------
-def transform_raw_to_silver(
-    spark,
-    catalog: str,
-    since: Optional[str] = None,
-    until: Optional[str] = None,
-    fallback_window_mins: int = 30,
-):
-    raw_table = f"{catalog}.raw.avito"
-
-    # 1) Window filter on ingest_ts
-    df = spark.table(raw_table)
-    conds = [F.col("payload").isNotNull(), F.col("ingest_ts").isNotNull()]
-    if since:
-        _ = _parse_iso8601(since)
-        conds.append(F.col("ingest_ts") >= F.to_timestamp(F.lit(since)))
-    if until:
-        _ = _parse_iso8601(until)
-        conds.append(F.col("ingest_ts") < F.to_timestamp(F.lit(until)))
-    if not since and not until:
-        conds.append(F.col("ingest_ts") >= F.expr(f"timestampadd(MINUTE, -{fallback_window_mins}, current_timestamp())"))
-
-    condition = reduce(lambda a, b: a & b, conds)
-    df = df.where(condition)
-
-    # 2) Parse payload JSON
-    payload_schema = T.StructType([
-        T.StructField("id", T.StringType()),
-        T.StructField("url", T.StringType()),
-        T.StructField("error", T.StringType()),
-        T.StructField("title", T.StringType()),
-        T.StructField("price_text", T.StringType()),
-        T.StructField("breadcrumbs", T.StringType()),
-        T.StructField("category", T.StringType()),
-        T.StructField("description", T.StringType()),
-        T.StructField("attributes", T.StringType()),
-        T.StructField("equipments", T.StringType()),
-        T.StructField("seller_name", T.StringType()),
-        T.StructField("seller_type", T.StringType()),
-        T.StructField("published_date", T.StringType()),
-        T.StructField("image_urls", T.StringType()),
-    ])
-
-    p = F.from_json(F.col("payload"), payload_schema).alias("p")
-    parsed = df.select("ingest_ts", p).where(F.col("p").isNotNull())
-
-    attrs_map = F.from_json(F.col("p.attributes"), T.MapType(T.StringType(), T.StringType()))
-    price_value = F.regexp_replace(F.col("p.price_text"), r"[^0-9]", "").cast("double")
-    image_urls_arr = F.transform(F.split(F.col("p.image_urls"), r"\s*\|\s*"), lambda x: F.trim(x))
-    equipments_arr = F.transform(F.split(F.col("p.equipments"), r"\s*;\s*"), lambda x: F.trim(x))
-
-    silver = parsed.select(
-        F.col("p.id").alias("id"),
-        F.col("p.url").alias("url"),
-        F.col("p.title").alias("title"),
-        price_value.alias("price"),
-        F.col("p.description").alias("description"),
-        F.col("p.seller_name").alias("seller_name"),
-        F.lower(F.col("p.seller_type")).alias("seller_type"),
-        image_urls_arr.alias("image_urls"),
-        equipments_arr.alias("equipments"),
-        F.col("ingest_ts").cast("timestamp").alias("ingest_ts"),
-        F.col("p.category").alias("category"),
-        F.col("p.breadcrumbs").alias("breadcrumbs"),
-        F.col("p.published_date").alias("published_date_text"),
-        attrs_map.alias("attributes_map"),
-    )
-
-    # Offer / property_type
-    silver = (
-        silver
-        .withColumn(
-            "offer",
-            F.when(F.col("category").contains("à louer"), "rent")
-             .when(F.col("category").contains("à vendre"), "sale")
-             .otherwise(None)
-        )
-        .withColumn(
-            "property_type",
-            F.when(
-                F.col("category").contains("à louer") | F.col("category").contains("à vendre"),
-                F.split(F.col("category"), ",")[0]
-            ).otherwise(None)
-        )
-        .drop("category")
-    )
-
-    # Breadcrumbs → city / neighborhood / site
-    split_bc = F.split(F.col("breadcrumbs"), " > ")
-    silver = (
-        silver
-        .withColumn("city", split_bc.getItem(2))
-        .withColumn("neighborhood", split_bc.getItem(3))
-        .withColumn("site", F.lit("avito"))
-        .drop("breadcrumbs")
-    )
-
-    # published_date text → timestamp
-    silver = silver.withColumn(
-        "published_date",
-        F.to_timestamp("published_date_text", "yyyy-MM-dd HH:mm:ss")
-    ).drop("published_date_text")
-
-    # Clean equipments
-    clean_udf = F.udf(clean_equipments, T.ArrayType(T.StringType()))
-    silver = silver.withColumn("equipments", clean_udf(F.col("equipments")))
-
-    # Expand attributes_map → known columns
-    attr_keys = [
-        "Surface habitable", "Caution", "Zoning", "Standing", "Surface totale", "Étage",
-        "Âge du bien", "Salle de bain", "Nombre de pièces", "Chambres",
-        "Frais de syndic / mois", "Condition", "Nombre d'étage", "Disponibilité",
-        "Salons", "Type d'appartement"
-    ]
-    for k in attr_keys:
-        silver = silver.withColumn(k, F.col("attributes_map")[F.lit(k)])
-    silver = silver.drop("attributes_map")
-
-    # NULL→0.0 for price
-    silver = silver.fillna({"price": 0.0})
-
-    # Rename FR → EN
-    rename_map = {
-        "Surface habitable": "living_area",
-        "Surface totale": "total_area",
-        "Étage": "floor",
-        "Âge du bien": "property_age",
-        "Salle de bain": "bathrooms",
-        "Nombre de pièces": "rooms",
-        "Chambres": "bedrooms",
-        "Frais de syndic / mois": "hoa_fee_per_month",
-        "Condition": "condition",
-        "Nombre d'étage": "floors",
-        "Disponibilité": "availability",
-        "Salons": "living_rooms",
-        "Type d'appartement": "apartment_type",
-        "Zoning": "zoning",
-        "Standing": "standing",
-        "Caution": "deposit",
-    }
-    for old, new in rename_map.items():
-        if old in silver.columns:
-            silver = silver.withColumnRenamed(old, new)
-
-    # Global sanitize
-    cols_before = silver.columns
-    sanitized = [to_snake_ascii(c) for c in cols_before]
-    seen = {}
-    uniq = []
-    for s in sanitized:
-        if s not in seen:
-            seen[s] = 1
-            uniq.append(s)
-        else:
-            seen[s] += 1
-            uniq.append(f"{s}_{seen[s]}")
-    for old, new in zip(cols_before, uniq):
-        if old != new:
-            silver = silver.withColumnRenamed(old, new)
-
-    # ---- Dedup INSIDE THE BATCH by (site,id): keep newest ingest_ts ----
-    w = Window.partitionBy("site", "id").orderBy(F.col("ingest_ts").desc_nulls_last())
-    silver = silver.withColumn("rn", F.row_number().over(w)).where(F.col("rn") == 1).drop("rn")
-
-    return silver
-
-def align_to_table_schema(spark, df, target_fqn: str):
-    target_schema = spark.table(target_fqn).schema
-    df_cols = set(df.columns)
-    for field in target_schema:
-        if field.name not in df_cols:
-            df = df.withColumn(field.name, F.lit(None).cast(field.dataType))
-    df = df.select(*[f.name for f in target_schema])
-    return df
-
 def main():
-    ap = argparse.ArgumentParser(description="Transform Avito RAW → SILVER (last 30 min + dedup + anti-join)")
+    ap = argparse.ArgumentParser()
     ap.add_argument("--catalog", default="rest")
-    ap.add_argument("--since", default=None, help="ISO8601 start (inclusive)")
-    ap.add_argument("--until", default=None, help="ISO8601 end (exclusive)")
-    ap.add_argument("--mode", default="append", help="append | overwrite | dynamic_overwrite")
-    ap.add_argument("--fallback-window-mins", type=int, default=30)
-    ap.add_argument("--rest-uri", default="http://iceberg-rest:8181")
-    ap.add_argument("--s3-endpoint", default="http://minio:9000")
-    ap.add_argument("--s3-access-key", default="admin")
-    ap.add_argument("--s3-secret-key", default="admin123")
+    ap.add_argument("--mode", choices=["append"], default="append")
+    ap.add_argument("--fallback-window-mins", type=int, default=35)
     args = ap.parse_args()
 
-    spark = build_spark(args.rest_uri, args.s3_endpoint, args.s3_access_key, args.s3_secret_key)
-    try:
-        batch_df = transform_raw_to_silver(
-            spark,
-            catalog=args.catalog,
-            since=args.since,
-            until=args.until,
-            fallback_window_mins=args.fallback_window_mins,
+    spark = build_spark()
+
+    # ---- Read RAW
+    raw = spark.table(f"{args.catalog}.raw.avito")
+
+    # ---- Parse payload
+    payload_schema = StructType([
+        StructField("id", StringType()),
+        StructField("url", StringType()),
+        StructField("error", StringType()),
+        StructField("title", StringType()),
+        StructField("price_text", StringType()),
+        StructField("breadcrumbs", StringType()),
+        StructField("category", StringType()),
+        StructField("description", StringType()),
+        StructField("attributes", StringType()),
+        StructField("equipments", StringType()),
+        StructField("seller_name", StringType()),
+        StructField("seller_type", StringType()),
+        StructField("published_date", StringType()),
+        StructField("image_urls", StringType()),
+        StructField("listing_type", StringType()),
+    ])
+
+    df = (
+        raw
+        .withColumn("json", from_json(col("payload"), payload_schema))
+        .select(col("ingest_ts"), col("json.*"))
+    )
+
+    # ---- Dedup by latest ingest_ts per id
+    w = Window.partitionBy("id").orderBy(col("ingest_ts").desc())
+    df = df.withColumn("rn", row_number().over(w)).filter(col("rn")==1).drop("rn")
+
+    # ---- Keep valid URL
+    df = df.filter((col("url").isNotNull()) & (trim(col("url"))!=""))
+
+    # ---- price
+    df = df.withColumn(
+        "price",
+        when((col("price_text").isNull()) | (length(col("price_text"))==0), lit(None).cast("double"))
+        .otherwise(
+            regexp_replace(
+              regexp_replace(
+                regexp_replace(col("price_text"), u"\u00A0",""),
+                r"[ ,]",""
+              ),
+              r"[^0-9.]", ""
+            ).cast("double")
         )
+    ).drop("price_text")
 
-        target = f"{args.catalog}.silver.avito"
+    # ---- seller
+    df = (
+        df.withColumn(
+            "seller",
+            when(
+                (col("seller_name").isNull()) | (trim(col("seller_name"))=="") |
+                (lower(trim(col("seller_name"))).isin("null","none","unknown")),
+                "unknown"
+            ).otherwise(lower(trim(col("seller_name"))))
+        ).drop("seller_name","seller_type")
+    )
 
-        # ---- ANTI-JOIN vs existing Silver: only keep (site,id) not present ----
-        try:
-            silver_ids = spark.table(target).select("site", "id").distinct()
-            # Left-anti on (site,id)
-            batch_df = (
-                batch_df.alias("b")
-                .join(silver_ids.alias("t"), on=(F.col("b.site")==F.col("t.site")) & (F.col("b.id")==F.col("t.id")), how="left_anti")
+    # ---- images
+    df = df.withColumn(
+        "images",
+        expr("FILTER(TRANSFORM(SPLIT(image_urls, '\\\\s*\\\\|\\\\s*'), x -> TRIM(x)), x -> x <> '')")
+    ).drop("image_urls")
+
+    # ---- equipments (array)
+    df = df.withColumn(
+        "equipments",
+        expr("""
+          CASE WHEN equipments IS NULL THEN array()
+          ELSE array_distinct(
+            FILTER(
+              TRANSFORM(SPLIT(equipments, '\\s*;\\s*'), x -> trim(x)),
+              x -> x <> '' AND x RLIKE '.*[A-Za-zÀ-ÿ].*'
+                   AND NOT (x RLIKE '.*[0-9].*')
+                   AND NOT (lower(x) RLIKE '.*moi.*')
+                   AND NOT (lower(x) RLIKE '^(aucune|studio)$')
             )
-        except Exception:
-            # table might not exist yet -> skip anti-join
-            pass
+          )
+          END
+        """)
+    )
 
-        # Align schema and write
-        batch_df = align_to_table_schema(spark, batch_df, target)
-        write_to_silver(spark, batch_df, catalog=args.catalog, table="silver.avito", mode=args.mode)
+    # ---- offre
+    df = df.withColumnRenamed("listing_type","offre")
 
-    finally:
-        spark.stop()
+    # ---- city/neighborhood from breadcrumbs
+    parts = split(coalesce(col("breadcrumbs"), lit("")), " > ")
+    idx = array_position(parts, "Tout le Maroc")
+    df = (
+        df
+        .withColumn(
+            "city",
+            when((idx>lit(0)) & (size(parts) >= (idx+lit(1))),
+                 trim(element_at(parts, (idx+lit(1)).cast("int"))))
+        )
+        .withColumn(
+            "neighborhood_raw",
+            when((idx>lit(0)) & (size(parts) >= (idx+lit(2))),
+                 trim(element_at(parts, (idx+lit(2)).cast("int"))))
+        )
+    )
+    bad_neigh = ["Avito Immobilier","أفيتو للعقار","Toute la ville","Autre secteur"]
+    df = df.withColumn("neighborhood",
+                       when(col("neighborhood_raw").isin(bad_neigh), None)
+                       .otherwise(col("neighborhood_raw"))).drop("neighborhood_raw")
+
+    # ---- site
+    df = df.withColumn("site", lit("avito"))
+
+    # ---- property_type + listing phrase from category
+    parts = split(coalesce(col("category"), lit("")), r"\s*,\s*")
+    df = (
+        df.withColumn("property_type", when(size(parts)>=1, trim(parts.getItem(0))))
+          .withColumn("listing_phrase", when(size(parts)>=2, trim(parts.getItem(1))))
+    )
+
+    # expected listing
+    df = (
+        df.withColumn(
+            "listing_expected",
+            when(col("listing_phrase").isin("à louer","a louer"), lit("location"))
+            .when(col("listing_phrase").isin("à vendre","a vendre"), lit("vente"))
+        )
+        .withColumn("offre_match", when(col("listing_expected")==col("offre"), lit(True)).otherwise(lit(False)))
+        .drop("category","listing_phrase","listing_expected")
+    )
+
+    # ---- attributes → dynamic columns (keep exact values)
+    attr_map = from_json(col("attributes"), MapType(StringType(), StringType()))
+    df = df.withColumn("attr_map", attr_map)
+    keys = [r["k"] for r in df.selectExpr("explode(map_keys(attr_map)) as k").distinct().collect() if r["k"]]
+
+    import unicodedata, re
+    def sanitize(name:str)->str:
+        name = unicodedata.normalize("NFKD", name).encode("ascii","ignore").decode("ascii")
+        name = re.sub(r"[^0-9a-zA-Z]+","_",name).strip("_")
+        return name.lower()
+
+    for k in keys:
+        df = df.withColumn(sanitize(k), trim(col("attr_map")[k]))
+    df = df.drop("attr_map")  # keep raw 'attributes' to drop later per your rule
+
+    # ---- FINAL projection to unified schema
+    # description -> description_text; drop breadcrumbs/attributes
+    final = df.select(
+        col("id"), col("url"), col("error"), col("ingest_ts"), col("site"),
+        col("offre"), col("price"), col("title"), col("seller"),
+        col("published_date"), col("city"), col("neighborhood"),
+        col("property_type"), col("images"), col("equipments"),
+        col("description").alias("description_text"),
+        col("offre_match"),
+        # extracted attribute fields if present:
+        col(sanitize("Surface habitable")).alias("surface_habitable") if "surface_habitable" in df.columns else lit(None).alias("surface_habitable"),
+        col(sanitize("Caution")).alias("caution") if "caution" in df.columns else lit(None).alias("caution"),
+        col(sanitize("Zoning")).alias("zoning") if "zoning" in df.columns else lit(None).alias("zoning"),
+        col(sanitize("Type d'appartement")).alias("type_d_appartement") if "type_d_appartement" in df.columns else lit(None).alias("type_d_appartement"),
+        col(sanitize("Standing")).alias("standing") if "standing" in df.columns else lit(None).alias("standing"),
+        col(sanitize("Surface totale")).alias("surface_totale") if "surface_totale" in df.columns else lit(None).alias("surface_totale"),
+        col(sanitize("Étage")).alias("etage") if "etage" in df.columns else lit(None).alias("etage"),
+        col(sanitize("Âge du bien")).alias("age_du_bien") if "age_du_bien" in df.columns else lit(None).alias("age_du_bien"),
+        col(sanitize("Nombre de pièces")).alias("nombre_de_pieces") if "nombre_de_pieces" in df.columns else lit(None).alias("nombre_de_pieces"),
+        col(sanitize("Chambres")).alias("chambres") if "chambres" in df.columns else lit(None).alias("chambres"),
+        col(sanitize("Salle de bain")).alias("salle_de_bain") if "salle_de_bain" in df.columns else lit(None).alias("salle_de_bain"),
+        col(sanitize("Frais de syndic / mois")).alias("frais_de_syndic_mois") if "frais_de_syndic_mois" in df.columns else lit(None).alias("frais_de_syndic_mois"),
+        col(sanitize("Condition")).alias("condition") if "condition" in df.columns else lit(None).alias("condition"),
+        col(sanitize("Nombre d'étage")).alias("nombre_d_etage") if "nombre_d_etage" in df.columns else lit(None).alias("nombre_d_etage"),
+        col(sanitize("Disponibilité")).alias("disponibilite") if "disponibilite" in df.columns else lit(None).alias("disponibilite"),
+        col(sanitize("Salons")).alias("salons") if "salons" in df.columns else lit(None).alias("salons"),
+        # Mubawab-only fields → NULLs
+        lit(None).cast("string").alias("features_amenities_json"),
+        lit(None).cast("string").alias("type_de_bien"),
+        lit(None).cast("string").alias("surface_de_la_parcelle"),
+        lit(None).cast("string").alias("type_du_sol"),
+        lit(None).cast("string").alias("etage_du_bien"),
+        lit(None).cast("string").alias("annees"),
+        lit(None).cast("string").alias("orientation"),
+        lit(None).cast("string").alias("etat"),
+    )
+
+    # Optional: window filter (if table large)
+    if args.fallback_window_mins and args.fallback_window_mins > 0:
+        final = final.where(col("ingest_ts") >= expr(f"timestampadd(MINUTE, -{args.fallback_window_mins}, current_timestamp())"))
+
+    # ---- Append into unified table
+    final.select(*UNIFIED_COLS).writeTo(f"{args.catalog}.silver.listings_all").append()
+
+    spark.stop()
 
 if __name__ == "__main__":
     main()

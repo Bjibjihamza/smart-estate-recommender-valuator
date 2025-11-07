@@ -86,8 +86,31 @@ services:
     volumes:
       - ./src:/opt/airflow/src
     command: >
-      bash -lc "python -m Pipeline.consumer.avito_consumer
+      bash -lc "python -m pipeline.consumer.avito_consumer
       --bootstrap kafka:9092 --topic realestate.avito.raw --group avito.dev.print"
+
+
+
+  mubawab-consumer:
+    image: apache/airflow:2.9.3
+    container_name: mubawab-consumer
+    depends_on:
+      kafka:
+        condition: service_healthy
+    environment:
+      PYTHONPATH: /opt/airflow/src
+      _PIP_ADDITIONAL_REQUIREMENTS: "confluent-kafka"
+      TZ: Africa/Casablanca
+    working_dir: /opt/airflow
+    volumes:
+      - ./src:/opt/airflow/src
+    command: >
+      bash -lc "python -m pipeline.consumer.mubawab_consumer
+      --bootstrap kafka:9092
+      --topic realestate.mubawab.raw
+      --group mubawab.dev.print"
+
+
 
   # ---------- AIRFLOW (Postgres + Web + Scheduler) ----------
   airflow-db:
@@ -215,6 +238,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 20
+    restart: unless-stopped
 
   # one-shot bucket + policy setup
   minio-setup:
@@ -316,11 +340,6 @@ services:
       - ./src:/opt/work/src:rw
       - ./data:/opt/work/data:rw
       - ./src/notebooks:/opt/work/notebooks:rw
-
-
-
-
-
 
 
 volumes:
