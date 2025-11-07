@@ -9,9 +9,9 @@ from pipeline.extract.mubawab_scraper import run_job
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--mode", choices=["louer", "vendre", "acheter"], default="louer")
-    ap.add_argument("--pages", type=int, default=20)
+    ap.add_argument("--pages", type=int, default=1)
     ap.add_argument("--limit", type=int, default=None)
-    ap.add_argument("--per-page", type=int, default=1000)
+    ap.add_argument("--per-page", type=int, default=10)
     ap.add_argument("--bootstrap", default="kafka:9092")
     ap.add_argument("--topic", default="realestate.mubawab.raw")
     ap.add_argument("--serp-delay", type=float, default=1.3)
