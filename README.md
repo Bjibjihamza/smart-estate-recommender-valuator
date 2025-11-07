@@ -226,7 +226,7 @@ raw        mubawab
 
 namespace  tableName
 ---------  ---------
-silver     avito
+silver     listing_all
 ```
 
 ---
@@ -584,35 +584,37 @@ docker logs <container-name>
 ```
 smart-estate-recommender-valuator/
 ├── dags/
-│   ├── avito_pipeline.py              # Avito Airflow DAG
-│   └── mubawab_pipeline.py            # Mubawab Airflow DAG
+│   ├── avito_pipeline.py
+│   └── mubawab_pipeline.py
 ├── src/
 │   ├── database/
-│   │   ├── bronze.py                  # RAW table creation (both sources)
-│   │   └── silver.py                  # SILVER table creation
-│   ├── notebooks/                     # Jupyter workspace
-│   │   ├── EDA_to_silver.ipynb
+│   │   ├── bronze.py
+│   │   └── silver.py
+│   ├── notebooks/
+│   │   ├── EDA_to_silver_avito.ipynb
+│   │   ├── EDA_to_silver_mubawab.ipynb
 │   │   └── init_iceberg.ipynb
 │   └── pipeline/
 │       ├── extract/
-│       │   ├── avito_scraper.py       # Avito web scraper
-│       │   └── mubawab_scraper.py     # Mubawab web scraper
+│       │   ├── avito_scraper.py
+│       │   └── mubawab_scraper.py
 │       ├── producer/
-│       │   ├── avito_producer.py      # Avito Kafka producer
-│       │   └── mubawab_producer.py    # Mubawab Kafka producer
+│       │   ├── avito_producer.py
+│       │   └── mubawab_producer.py
 │       ├── consumer/
-│       │   ├── avito_consumer.py      # Avito Kafka consumer
-│       │   └── mubawab_consumer.py    # Mubawab Kafka consumer
+│       │   ├── avito_consumer.py
+│       │   └── mubawab_consumer.py
 │       ├── load/
-│       │   ├── iceberg_kafka_sink.py  # Streaming sink (multi-source)
-│       │   └── silver_loader.py       # Silver writer
+│       │   ├── iceberg_kafka_sink.py
+│       │   └── silver_loader.py
 │       └── transform/
-│           └── avito_raw_to_silver.py # Transformation logic
-├── Dockerfile                         # Scraper image
-├── Dockerfile.spark                   # Spark + Iceberg image
-├── docker-compose.yml                 # Stack definition
-├── .env                               # Environment variables
-└── README.md                          # This file
+│           ├── avito_raw_to_silver.py
+│           └── mubawab_raw_to_silver.py   # (if you intend to keep it)
+├── Dockerfile
+├── Dockerfile.spark
+├── docker-compose.yml
+├── .env
+└── README.md                    
 ```
 
 ---
