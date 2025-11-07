@@ -6,7 +6,7 @@ def write_to_silver(
     df: DataFrame,
     catalog: str = "rest",
     table: str = "silver.avito",
-    mode: str = "append",  # append | overwrite | dynamic_overwrite
+    mode: str = "append",
 ):
     """
     DataFrameWriterV2 to Iceberg table.
