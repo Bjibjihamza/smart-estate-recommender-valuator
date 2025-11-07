@@ -209,6 +209,8 @@ docker exec -it spark-iceberg bash -lc "/opt/spark/bin/spark-sql \
   -e 'SHOW NAMESPACES; SHOW TABLES IN raw; SHOW TABLES IN silver;'"
 ```
 
+or u can acces on notebooks*
+
 **Expected output:**
 
 ```
