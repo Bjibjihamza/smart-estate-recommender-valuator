@@ -238,53 +238,74 @@ services:
       interval: 5s
       timeout: 5s
       retries: 20
-    restart: unless-stopped
 
   # one-shot bucket + policy setup
   minio-setup:
-    image: minio/mc:latest 
+    image: minio/mc:latest
     container_name: minio-setup
     depends_on:
       minio:
         condition: service_healthy
     entrypoint: /bin/sh -c
     command: >
-      "
-      mc alias set local http://minio:9000 ${MINIO_ROOT_USER:-admin} ${MINIO_ROOT_PASSWORD:-admin123} &&
-      mc mb -p local/lake || true &&
-      mc anonymous set download local/lake || true
-      "
+      set -e;
+      # Wait for MinIO to actually accept mc calls (DNS + API ready)
+      i=0; 
+      until mc alias set local http://minio:9000 ${MINIO_ROOT_USER:-admin} ${MINIO_ROOT_PASSWORD:-admin123} >/dev/null 2>&1 \
+        && mc ls local >/dev/null 2>&1; do
+        i=$$((i+1));
+        if [ "$$i" -gt 30 ]; then echo "MinIO not ready after retries"; exit 1; fi;
+        echo "Waiting for MinIO... ($$i)"; sleep 2;
+      done;
+      # Create bucket if missing (no error if exists)
+      mc mb -p local/lake || true;
+      # Set anon download on bucket (no error if already set)
+      mc anonymous set download local/lake || true;
+      # Final sanity
+      mc ls local/lake >/dev/null 2>&1 || (echo "Bucket not accessible"; exit 1)
+    restart: "no"
+
+
 
   iceberg-rest:
     image: tabulario/iceberg-rest:1.6.0
     container_name: iceberg-rest
     depends_on:
-      minio:         
-       condition: service_healthy
+      minio:
+        condition: service_healthy
+      minio-setup:
+        condition: service_completed_successfully
     environment:
-      # REST server writes to MinIO
-      CATALOG_IO__IMPL: org.apache.iceberg.aws.s3.S3FileIO
+      # --- Tell REST to use JDBC Catalog (SQLite) ---
+      CATALOG_CATALOG__IMPL: org.apache.iceberg.jdbc.JdbcCatalog
+      CATALOG_JDBC__DRIVER: org.sqlite.JDBC
+      # Persist DB file and enable WAL + busy timeout (prevents SQLITE_BUSY)
+      CATALOG_JDBC__URL: jdbc:sqlite:/var/lib/iceberg/iceberg_catalog.db?busy_timeout=60000&journal_mode=WAL
+
+
+      # --- Warehouse + IO on MinIO (unchanged) ---
       CATALOG_WAREHOUSE: s3://lake/warehouse
-        
-      # S3/MinIO connection settings
+      CATALOG_IO__IMPL: org.apache.iceberg.aws.s3.S3FileIO
+
       CATALOG_S3_ENDPOINT: http://minio:9000
       CATALOG_S3_PATH__STYLE__ACCESS: "true"
       CATALOG_S3_ACCESS__KEY__ID: ${MINIO_ROOT_USER:-admin}
       CATALOG_S3_SECRET__ACCESS__KEY: ${MINIO_ROOT_PASSWORD:-admin123}
-        
-        # AWS SDK configuration (critical!)
+
       AWS_REGION: us-east-1
       AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER:-admin}
       AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:-admin123}
-        
-        # Alternative S3 configuration format
+
       S3_ENDPOINT: http://minio:9000
       S3_PATH_STYLE_ACCESS: "true"
       S3_ACCESS_KEY_ID: ${MINIO_ROOT_USER:-admin}
       S3_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:-admin123}
       S3_REGION: us-east-1
+    volumes:
+      - iceberg_catalog:/var/lib/iceberg   # <-- persist sqlite db
     ports:
       - "8181:8181"
+    restart: unless-stopped
 
 
 
@@ -299,6 +320,8 @@ services:
     depends_on:
       iceberg-rest:
         condition: service_started
+      minio-setup:
+        condition: service_completed_successfully
       kafka:
         condition: service_healthy
     environment:
@@ -310,6 +333,8 @@ services:
     volumes:
       - ./src:/opt/work/src:rw
     command: bash -lc "sleep infinity"
+    restart: unless-stopped
+
 
   # spark-notebook reuses the image (NO build block)
   spark-notebook:
@@ -346,3 +371,4 @@ volumes:
   kafka_data: {}
   airflow_pg: {}
   minio_data: {}
+  iceberg_catalog: {}

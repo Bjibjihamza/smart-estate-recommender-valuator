@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
 Create `rest.silver.listings_all` in Iceberg REST catalog (unified schema).
+
 - description_text only (map Avito.description -> description_text when inserting)
 - EXCLUDE breadcrumbs, attributes
 - EXCLUDE agency_url
@@ -90,15 +91,24 @@ def create_namespace_and_table(spark: SparkSession):
         disponibilite STRING,
         salons STRING,
 
-        -- ============ MUBAWAB-specific (kept as-is, minus agency_url) ============
+        -- ============ MUBAWAB-specific (covers full updated schema) ============
         features_amenities_json STRING,
+        type_de_terrain STRING,
         type_de_bien STRING,
+        surface STRING,
+        statut_du_terrain STRING,
         surface_de_la_parcelle STRING,
         type_du_sol STRING,
         etage_du_bien STRING,
+        detail_1 STRING,
         annees STRING,
+        constructibilite STRING,
+        salles_de_bain STRING,
+        livraison STRING,
+        pieces STRING,
         orientation STRING,
-        etat STRING
+        etat STRING,
+        nombre_d_etages STRING
     )
     USING iceberg
     PARTITIONED BY (days(ingest_ts))

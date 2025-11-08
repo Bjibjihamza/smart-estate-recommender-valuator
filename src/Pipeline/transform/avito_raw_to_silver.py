@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import argparse
-from datetime import timedelta
 from pyspark.sql import SparkSession, Window
 from pyspark.sql.functions import (
     col, trim, lit, when, length, regexp_replace, from_json, split, size,
@@ -15,9 +14,10 @@ UNIFIED_COLS = [
     "type_d_appartement","standing","surface_totale","etage","age_du_bien",
     "nombre_de_pieces","chambres","salle_de_bain","frais_de_syndic_mois",
     "condition","nombre_d_etage","disponibilite","salons",
-    # Mubawab-specific that Avito doesn't have → NULLs
-    "features_amenities_json","type_de_bien","surface_de_la_parcelle",
-    "type_du_sol","etage_du_bien","annees","orientation","etat"
+    "features_amenities_json",
+    "type_de_terrain","type_de_bien","statut_du_terrain",
+    "surface_de_la_parcelle","type_du_sol","etage_du_bien","annees",
+    "constructibilite","livraison","orientation","etat","nombre_d_etages"
 ]
 
 def build_spark():
@@ -218,15 +218,20 @@ def main():
         col(sanitize("Nombre d'étage")).alias("nombre_d_etage") if "nombre_d_etage" in df.columns else lit(None).alias("nombre_d_etage"),
         col(sanitize("Disponibilité")).alias("disponibilite") if "disponibilite" in df.columns else lit(None).alias("disponibilite"),
         col(sanitize("Salons")).alias("salons") if "salons" in df.columns else lit(None).alias("salons"),
-        # Mubawab-only fields → NULLs
+        # Mubawab-only fields → NULLs (extended)
         lit(None).cast("string").alias("features_amenities_json"),
+        lit(None).cast("string").alias("type_de_terrain"),
         lit(None).cast("string").alias("type_de_bien"),
+        lit(None).cast("string").alias("statut_du_terrain"),
         lit(None).cast("string").alias("surface_de_la_parcelle"),
         lit(None).cast("string").alias("type_du_sol"),
         lit(None).cast("string").alias("etage_du_bien"),
         lit(None).cast("string").alias("annees"),
+        lit(None).cast("string").alias("constructibilite"),
+        lit(None).cast("string").alias("livraison"),
         lit(None).cast("string").alias("orientation"),
         lit(None).cast("string").alias("etat"),
+        lit(None).cast("string").alias("nombre_d_etages"),
     )
 
     # Optional: window filter (if table large)

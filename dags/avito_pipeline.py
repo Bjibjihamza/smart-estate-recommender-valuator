@@ -11,8 +11,11 @@ from airflow.operators.python import BranchPythonOperator
 
 # ========= Parameters (tweak from Airflow UI Variables if you want) =========
 DEFAULT_PAGES = int(Variable.get("avito_pages", default_var="1"))
-DEFAULT_LIMIT = Variable.get("avito_limit", default_var="5")  # set to "None" to disable
+DEFAULT_LIMIT = Variable.get("avito_limit", default_var="10000")  # set to "None" to disable
 FALLBACK_WINDOW_MINS = int(Variable.get("avito_window_mins", default_var="35"))
+
+# NEW: start page
+DEFAULT_START_PAGE = int(Variable.get("avito_start_page", default_var="1"))
 
 SCRAPER_CONTAINER = Variable.get("scraper_container", default_var="avito-scraper")
 SPARK_CONTAINER = Variable.get("spark_container", default_var="spark-iceberg")
@@ -23,15 +26,23 @@ KAFKA_TOPIC = Variable.get("kafka_topic_avito", default_var="realestate.avito.ra
 
 
 # ========================== Helpers ==========================
-def _make_scrape_cmd(mode: str, pages: int = DEFAULT_PAGES, limit: str | None = DEFAULT_LIMIT) -> str:
+def _make_scrape_cmd(
+    mode: str,
+    pages: int = DEFAULT_PAGES,
+    limit: str | None = DEFAULT_LIMIT,
+    start_page: int = DEFAULT_START_PAGE,
+) -> str:
     """Build the docker-exec command to run the Avito producer scraper."""
-    limit_part = f"--limit {limit} " if (limit and limit.lower() != "none") else ""
+    limit_part = f"--limit {limit} " if (limit and str(limit).lower() != "none") else ""
+    start_page_part = f"--start-page {start_page} " if start_page and int(start_page) > 1 else ""
+
     return (
         f"docker exec -i {SCRAPER_CONTAINER} bash -lc '"
         f"export PYTHONPATH=/app/src && "
         f"python /app/src/pipeline/producer/avito_producer.py "
         f"--mode {mode} --pages {pages} "
         f"{limit_part}"
+        f"{start_page_part}"
         f"--bootstrap {KAFKA_BOOTSTRAP} --topic {KAFKA_TOPIC}'"
     )
 
@@ -97,7 +108,6 @@ with DAG(
             "--catalog rest --mode append --fallback-window-mins 35'"
         ),
     )
-
 
     choose_mode >> [scrape_louer, scrape_acheter] >> scrape_done
     scrape_done >> transform_to_silver

@@ -15,8 +15,8 @@ KAFKA_BOOTSTRAP_DEFAULT = "kafka:9092"
 KAFKA_TOPIC_DEFAULT = "realestate.avito.raw"
 
 BASE = "https://www.avito.ma"
-START_LOUER = "https://www.avito.ma/fr/maroc/locations_immobilieres-à_louer"
-START_VENDRE = "https://www.avito.ma/fr/maroc/ventes_immobilieres-à_vendre"
+START_LOUER = "https://www.avito_ma/fr/maroc/locations_immobilieres-à_louer".replace("_ma", ".ma")
+START_VENDRE = "https://www.avito_ma/fr/maroc/ventes_immobilieres-à_vendre".replace("_ma", ".ma")
 
 HEADERS_LIST = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -32,12 +32,13 @@ NUM_RE = re.compile(r"[\d\s,.]+")
 # ----------------------------
 def pick_headers(i: int) -> Dict[str, str]:
     return {
-        "User-Agent": HEADERS_LIST[i % len(HEADERS_LIST)],
+        "User-Agent": HEADERS_LIST[i % len(HEADERS_LIST)] ,
         "Accept-Language": "fr,en;q=0.9",
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
         "Cache-Control": "no-cache",
         "Pragma": "no-cache",
     }
+
 
 def clean_text(text: Any) -> Optional[str]:
     if text is None:
@@ -48,15 +49,18 @@ def clean_text(text: Any) -> Optional[str]:
     text = re.sub(r"\s+", " ", text).strip()
     return text or None
 
+
 def text_or_none(el) -> Optional[str]:
     if not el:
         return None
     t = el.get_text(" ", strip=True)
     return clean_text(t) if t else None
 
+
 def get_id_from_url(url: str) -> Optional[str]:
     m = ID_RE.search(url)
     return m.group(1) if m else None
+
 
 # normalize Avito mode -> listing_type
 def normalize_listing_type(mode: str) -> str:
@@ -66,6 +70,7 @@ def normalize_listing_type(mode: str) -> str:
       - 'louer' -> 'location'
     """
     return "vente" if mode in ("vendre", "acheter") else "location"
+
 
 # ---------- Convert relative time to absolute date ----------
 def parse_relative_date(text: str, scrape_time: datetime) -> Optional[str]:
@@ -100,6 +105,7 @@ def parse_relative_date(text: str, scrape_time: datetime) -> Optional[str]:
     absolute_date = scrape_time - delta
     return absolute_date.strftime("%Y-%m-%d %H:%M:%S")
 
+
 # ----------------------------
 # SERP
 # ----------------------------
@@ -127,7 +133,12 @@ def extract_listings_from_serp(html: str) -> List[str]:
             urls.append(u)
     return urls
 
+
 def find_next_page(html: str, current_url: str) -> Optional[str]:
+    """
+    Ancien fallback basé sur le HTML; laissé au cas où mais
+    le start_page utilise directement le paramètre 'o'.
+    """
     soup = BeautifulSoup(html, "lxml")
     # UI chevron next
     for a in soup.select('a.sc-1cf7u6r-0[href]'):
@@ -151,29 +162,67 @@ def find_next_page(html: str, current_url: str) -> Optional[str]:
 
     return None
 
-def crawl_serp(start_url: str, max_pages: int, delay: float, max_items: Optional[int] = None) -> List[str]:
+
+def build_page_url(base_url: str, page: int) -> str:
+    """
+    Construit l'URL de la page N via le paramètre ?o=N (Avito).
+    page = 1 => pas de param 'o'.
+    """
+    u = urlparse(base_url)
+    qs = parse_qs(u.query)
+
+    if page <= 1:
+        qs.pop("o", None)
+    else:
+        qs["o"] = [str(page)]
+
+    new_q = urlencode({k: (v[0] if isinstance(v, list) and len(v) == 1 else v)
+                       for k, v in qs.items()}, doseq=True)
+    return urlunparse((u.scheme, u.netloc, u.path, u.params, new_q, u.fragment))
+
+
+def crawl_serp(
+    start_url: str,
+    max_pages: int,
+    delay: float,
+    max_items: Optional[int] = None,
+    start_page: int = 1,
+) -> List[str]:
+    """
+    Crawl SERP from start_page for max_pages pages.
+    Exemple: start_page=10, max_pages=10 => pages 10..19 (10 pages).
+    """
     session = requests.Session()
-    urls, url = [], start_url
-    for page in range(1, max_pages + 1):
-        print(f"[SERP] Page {page} → {url}")
-        r = session.get(url, headers=pick_headers(page), timeout=30)
+    urls: List[str] = []
+
+    current_page = start_page
+    url = build_page_url(start_url, current_page)
+
+    for page_offset in range(max_pages):
+        print(f"[SERP] Page {current_page} → {url}")
+        r = session.get(url, headers=pick_headers(current_page), timeout=30)
         r.raise_for_status()
         found = extract_listings_from_serp(r.text)
+
         for u in found:
             if u not in urls:
                 urls.append(u)
                 if max_items is not None and len(urls) >= max_items:
                     print(f"       Reached limit {max_items}, stopping SERP crawl")
                     return urls
+
         print(f"       +{len(found)} found (unique total {len(urls)})")
-        if page < max_pages:
-            nxt = find_next_page(r.text, url)
-            if not nxt or nxt == url:
-                print("       No next page found, stopping")
-                break
-            url = nxt
-            time.sleep(delay)
+
+        # Stop if this was the last page to fetch
+        if page_offset >= max_pages - 1:
+            break
+
+        current_page += 1
+        url = build_page_url(start_url, current_page)
+        time.sleep(delay)
+
     return urls
+
 
 # ----------------------------
 # attributes -> JSON
@@ -191,6 +240,7 @@ def extract_attributes_json(soup: BeautifulSoup) -> Dict[str, Any]:
             if label and value:
                 attributes[label] = value
     return attributes
+
 
 # ----------------------------
 # details
@@ -249,6 +299,7 @@ def extract_from_dom(soup: BeautifulSoup, scrape_time: datetime) -> Dict[str, An
 
     return out
 
+
 def parse_property(url: str, i: int, listing_type: str) -> Dict[str, Any]:
     """
     Fetch and parse a single listing detail page.
@@ -270,6 +321,7 @@ def parse_property(url: str, i: int, listing_type: str) -> Dict[str, Any]:
         out["error"] = str(e)
     return out
 
+
 # ----------------------------
 # Kafka helpers
 # ----------------------------
@@ -284,15 +336,18 @@ def build_producer(bootstrap: str) -> Producer:
     }
     return Producer(conf)
 
+
 def delivery_cb(err, msg):
     if err:
         print(f"[DLVRY_ERROR] {err} (topic={msg.topic()} key={msg.key()})")
+
 
 def send_to_kafka(row: Dict[str, Any], producer: Producer, kafka_topic: str):
     key = str(row.get("id", "")).encode("utf-8")
     value = json.dumps(row, ensure_ascii=False).encode("utf-8")
     producer.produce(kafka_topic, key=key, value=value, on_delivery=delivery_cb)
     producer.poll(0)  # non-blocking; serves delivery callbacks
+
 
 # ----------------------------
 # job
@@ -307,6 +362,7 @@ def run_job(
     serp_delay: float = 1.5,
     detail_delay: float = 1.5,
     max_items: Optional[int] = None,
+    start_page: int = 1,  # NEW
 ):
     # normalize mode and compute listing_type
     mode = "vendre" if mode in ("vendre", "acheter") else "louer"
@@ -314,10 +370,12 @@ def run_job(
     listing_type = normalize_listing_type(mode)  # NEW
 
     print(
-        f"[*] Mode: {mode.upper()} (type={listing_type}) | Pages: {num_pages} | Sink: {sink} | Limit: {max_items}"
+        f"[*] Mode: {mode.upper()} (type={listing_type}) "
+        f"| Start page: {start_page} | Pages: {num_pages} "
+        f"| Sink: {sink} | Limit: {max_items}"
     )
 
-    urls = crawl_serp(start, num_pages, serp_delay, max_items=max_items)
+    urls = crawl_serp(start, num_pages, serp_delay, max_items=max_items, start_page=start_page)
     if max_items is not None:
         urls = urls[:max_items]
     print(f"[*] Total URLs: {len(urls)}")
@@ -355,6 +413,7 @@ def run_job(
     else:
         print(f"[✓] Sent {len(rows)} messages to Kafka topic '{kafka_topic}'")
 
+
 # ----------------------------
 # CLI
 # ----------------------------
@@ -369,6 +428,10 @@ if __name__ == "__main__":
     ap.add_argument("--topic", default=KAFKA_TOPIC_DEFAULT)
     ap.add_argument("--serp-delay", type=float, default=1.5)
     ap.add_argument("--detail-delay", type=float, default=1.5)
+
+    # NEW: start page
+    ap.add_argument("--start-page", type=int, default=1)
+
     args = ap.parse_args()
 
     run_job(
@@ -381,4 +444,5 @@ if __name__ == "__main__":
         serp_delay=args.serp_delay,
         detail_delay=args.detail_delay,
         max_items=args.limit,
+        start_page=args.start_page,
     )

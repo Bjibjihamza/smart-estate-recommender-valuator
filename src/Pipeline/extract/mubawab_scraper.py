@@ -2,19 +2,19 @@
 # -*- coding: utf-8 -*-
 
 """
-Scrape Mubawab listings → rows (dicts) and optionally push to Kafka (via run_job)
+Mubawab CC Scraper (all building categories, newest first, no surface filters)
 
-Minimal payload (clean for Silver):
+Outputs one clean record per listing (ready for Silver):
   - id, url, error
   - title
-  - price (numeric MAD)           <-- only one price field kept
+  - price (numeric MAD)                 <-- single numeric field
   - location_text
   - description_text
-  - features_main_json            <-- JSON map as string
-  - features_amenities_json       <-- JSON array as string
-  - gallery_urls                  <-- JSON array as string
+  - features_main_json                  <-- JSON map as string (incl. adDetails)
+  - features_amenities_json             <-- JSON array as string
+  - gallery_urls                        <-- JSON array as string
   - agency_name, agency_url
-  - listing_type                  <-- NEW: 'vente' or 'location'
+  - listing_type                        <-- 'vente' or 'location'
 """
 
 import argparse
@@ -37,8 +37,16 @@ KAFKA_BOOTSTRAP_DEFAULT = "kafka:9092"
 KAFKA_TOPIC_DEFAULT = "realestate.mubawab.raw"
 
 BASE = "https://www.mubawab.ma"
-LISTING_LOUER = "https://www.mubawab.ma/fr/sc/appartements-a-louer:o:n"
-LISTING_VENDRE = "https://www.mubawab.ma/fr/sc/appartements-a-vendre:o:n"
+
+# CC categories (sale vs rent)
+CC_DEFAULT_CATEGORIES_SALE = (
+    "apartment-sale,commercial-sale,farm-sale,house-sale,land-sale,"
+    "office-sale,other-sale,riad-sale,villa-sale"
+)
+CC_DEFAULT_CATEGORIES_RENT = (
+    "apartment-rent,commercial-rent,farm-rent,house-rent,land-rent,"
+    "office-rent,other-rent,riad-rent,villa-rent"
+)
 
 UA_LIST = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36",
@@ -61,6 +69,7 @@ def pick_headers(i: int) -> Dict[str, str]:
         "Pragma": "no-cache",
     }
 
+
 def clean_text(text: Optional[str]) -> Optional[str]:
     if text is None:
         return None
@@ -68,19 +77,43 @@ def clean_text(text: Optional[str]) -> Optional[str]:
     t = re.sub(r"\s+", " ", t).strip()
     return t or None
 
-def page_url(mode: str, page: int) -> str:
-    base = LISTING_VENDRE if mode == "vendre" else LISTING_LOUER
-    if page <= 1:
-        return base
-    # Mubawab paginates with :p:N
-    return f"{base}:p:{page}"
+
+def normalize_listing_type(mode: str) -> str:
+    """Convert mode to standardized listing_type."""
+    return "vente" if mode in ("vendre", "acheter") else "location"
+
+
+def build_cc_url(mode: str, page: int, order: Optional[str], categories: str) -> str:
+    """
+    Build a CC SERP URL:
+      - vendre → /fr/cc/immobilier-a-vendre-all
+      - louer  → /fr/cc/immobilier-a-louer-all
+    Flags are colon-separated after the base: :o:n :sc:... :p:N
+    """
+    base_path = "/fr/cc/immobilier-a-vendre-all" if mode == "vendre" else "/fr/cc/immobilier-a-louer-all"
+    flags: List[str] = []
+    if order:
+        flags.append(f"o:{order}")              # e.g., n=newest
+    if categories:
+        flags.append(f"sc:{categories}")        # comma-separated list
+    if page and page > 1:
+        flags.append(f"p:{page}")               # page number
+
+    if flags:
+        return f"{BASE}{base_path}:{':'.join(flags)}"
+    return f"{BASE}{base_path}"
+
 
 def extract_firstN_links(html: str, limit: int = 25) -> List[str]:
+    """
+    Extract listing links from a CC SERP page.
+    We’re liberal and scan multiple selectors + a final fallback.
+    """
     soup = BeautifulSoup(html, "lxml")
     links: List[str] = []
     seen: Set[str] = set()
 
-    # Card boxes with direct linkref
+    # Cards that embed direct link in a 'linkref' (when present)
     for box in soup.select('div.listingBox[linkref]'):
         href = box.get("linkref", "").strip()
         if href and href.startswith("http") and "/fr/a/" in href:
@@ -102,12 +135,12 @@ def extract_firstN_links(html: str, limit: int = 25) -> List[str]:
                 if len(links) >= limit:
                     return links
 
-    # Fallback: any ad link
+    # General anchors to be safe
     for a in soup.select('a[href*="/fr/a/"]'):
         href = a.get("href", "").strip()
         if href.startswith("/"):
             href = urljoin(BASE, href)
-        if href.startswith("http") and href not in seen:
+        if href.startswith("http") and "/fr/a/" in href and href not in seen:
             seen.add(href)
             links.append(href)
             if len(links) >= limit:
@@ -115,9 +148,11 @@ def extract_firstN_links(html: str, limit: int = 25) -> List[str]:
 
     return links[:limit]
 
+
 def get_id_from_url(url: str) -> Optional[str]:
     m = ID_RE.search(url)
     return m.group(1) if m else None
+
 
 def parse_price_number(price_text: Optional[str]) -> Optional[int]:
     if not price_text:
@@ -130,16 +165,14 @@ def parse_price_number(price_text: Optional[str]) -> Optional[int]:
     except Exception:
         return None
 
-def normalize_listing_type(mode: str) -> str:
-    """Convert mode to standardized listing_type"""
-    return "vente" if mode in ("vendre", "acheter") else "location"
-
 # ----------------------------
 # Parsing a listing page
 # ----------------------------
 def parse_listing_details(html: str) -> Dict[str, Any]:
     """
     Extract a minimal, clean set of fields from a Mubawab ad page.
+    All structured features (Caractéristiques générales + adDetails)
+    go into features_main_json (JSON map).
     """
     soup = BeautifulSoup(html, "lxml")
     out: Dict[str, Any] = {}
@@ -157,25 +190,12 @@ def parse_listing_details(html: str) -> Dict[str, Any]:
     loc_el = soup.select_one("h3.greyTit")
     out["location_text"] = clean_text(loc_el.get_text()) if loc_el else None
 
-    # Amenities (icons like Terrasse, Ascenseur…) -> JSON array string
-    amenities = []
-    for feat in soup.select("div.adFeatures div.adFeature span"):
-        txt = clean_text(feat.get_text())
-        if txt:
-            amenities.append(txt)
-    out["features_amenities_json"] = json.dumps(amenities, ensure_ascii=False) if amenities else None
-
-    # Description (first paragraph in blockProp)
-    desc_block = soup.select_one("div.blockProp")
-    desc = None
-    if desc_block:
-        p_tag = desc_block.find("p")
-        if p_tag:
-            desc = clean_text(p_tag.get_text())
-    out["description_text"] = desc
-
-    # Main characteristics (label/value pairs) -> JSON map string
+    # ----------------------------
+    # Main characteristics → map
+    # ----------------------------
     attr_dict: Dict[str, str] = {}
+
+    # 1) Caractéristiques générales (labels + values)
     for feature in soup.select("div.caractBlockProp div.adMainFeature"):
         label_el = feature.select_one("p.adMainFeatureContentLabel")
         value_el = feature.select_one("p.adMainFeatureContentValue")
@@ -184,9 +204,55 @@ def parse_listing_details(html: str) -> Dict[str, Any]:
             v = clean_text(value_el.get_text())
             if k and v:
                 attr_dict[k] = v
+
+    # 2) Top icons (surface, pièces, chambres, SDB) dans .adDetails
+    detail_index = 1
+    for span in soup.select("div.adDetails div.adDetailFeature span"):
+        txt = clean_text(span.get_text())
+        if not txt:
+            continue
+
+        key = None
+        if "m²" in txt or "m2" in txt or "\u00b2" in txt:
+            key = "Surface"
+        elif "Pièce" in txt or "Pièces" in txt:
+            key = "Pièces"
+        elif "Chambre" in txt:
+            key = "Chambres"
+        elif "Salle de bain" in txt:
+            key = "Salles de bain"
+        else:
+            key = f"Detail_{detail_index}"
+            detail_index += 1
+
+        attr_dict[key] = txt
+
     out["features_main_json"] = json.dumps(attr_dict, ensure_ascii=False) if attr_dict else None
 
+    # ----------------------------
+    # Amenities (icons like Terrasse, Ascenseur…) -> JSON array string
+    # ----------------------------
+    amenities: List[str] = []
+    for feat in soup.select("div.adFeatures div.adFeature span"):
+        txt = clean_text(feat.get_text())
+        if txt:
+            amenities.append(txt)
+    out["features_amenities_json"] = json.dumps(amenities, ensure_ascii=False) if amenities else None
+
+    # ----------------------------
+    # Description (first paragraph in blockProp)
+    # ----------------------------
+    desc_block = soup.select_one("div.blockProp")
+    desc = None
+    if desc_block:
+        p_tag = desc_block.find("p")
+        if p_tag:
+            desc = clean_text(p_tag.get_text())
+    out["description_text"] = desc
+
+    # ----------------------------
     # Images (gallery + slider) -> JSON array string
+    # ----------------------------
     imgs: List[str] = []
     for img in soup.select("div.picturesGallery img[src]"):
         src = img.get("src")
@@ -203,7 +269,9 @@ def parse_listing_details(html: str) -> Dict[str, Any]:
             dedup.append(u)
     out["gallery_urls"] = json.dumps(dedup, ensure_ascii=False) if dedup else None
 
-    # Agency (no logo)
+    # ----------------------------
+    # Agency (name + url)
+    # ----------------------------
     agency_name = agency_url = None
     business_info = soup.select_one("div.businessInfo")
     if business_info:
@@ -236,9 +304,11 @@ def build_producer(bootstrap: str) -> Producer:
     }
     return Producer(conf)
 
+
 def delivery_cb(err, msg):
     if err:
         print(f"[DLVRY_ERROR] {err} (topic={msg.topic()} key={msg.key()})")
+
 
 def send_to_kafka(row: Dict[str, Any], producer: Producer, kafka_topic: str):
     key = (row.get("id") or "").encode("utf-8")
@@ -255,7 +325,7 @@ def fetch_details(session: requests.Session, url: str, i: int, delay: float, lis
         "id": get_id_from_url(url),
         "url": url,
         "error": None,
-        "listing_type": listing_type  # NEW: add listing type
+        "listing_type": listing_type,
     }
     try:
         r = session.get(url, headers=pick_headers(i), timeout=30)
@@ -268,42 +338,81 @@ def fetch_details(session: requests.Session, url: str, i: int, delay: float, lis
         time.sleep(delay + random.random() * 0.5)
     return data
 
-def crawl_serp(mode: str, pages: int, per_page: Optional[int], serp_delay: float) -> List[str]:
+
+def crawl_cc_serp(
+    mode: str,
+    num_pages: int,
+    per_page: Optional[int],
+    serp_delay: float,
+    order: str,
+    categories: str,
+    start_page: int = 1,
+) -> List[str]:
+    """
+    Crawl SERP from start_page for num_pages pages.
+    Exemple: start_page=10, num_pages=10 => pages 10..19 (10 pages).
+    """
     session = requests.Session()
     all_links: List[str] = []
-    for p in range(1, pages + 1):
-        url = page_url(mode, p)
-        print(f"[SERP] Page {p} → {url}")
-        resp = session.get(url, headers=pick_headers(p), timeout=30)
+
+    current_page = start_page
+    for page_offset in range(num_pages):
+        url = build_cc_url(mode, current_page, order=order, categories=categories)
+        print(f"[SERP] Page {current_page} → {url}")
+        resp = session.get(url, headers=pick_headers(current_page), timeout=30)
         resp.raise_for_status()
         links = extract_firstN_links(resp.text, limit=per_page or 25)
         print(f"       +{len(links)} links")
-        # Keep unique order
         for u in links:
             if u not in all_links:
                 all_links.append(u)
-        if p < pages:
+
+        if page_offset < num_pages - 1:
+            current_page += 1
             time.sleep(serp_delay)
+
     return all_links
+
 
 def run_job(
     mode: str,
     num_pages: int = 1,
-    sink: str = "kafka",
+    sink: str = "csv",
     out_csv: str = "mubawab_out.csv",
     kafka_bootstrap: str = KAFKA_BOOTSTRAP_DEFAULT,
     kafka_topic: str = KAFKA_TOPIC_DEFAULT,
     serp_delay: float = 1.3,
     detail_delay: float = 1.3,
-    per_page: Optional[int] = None,
+    per_page: Optional[int] = 25,
     max_items: Optional[int] = None,
+    order: str = "n",
+    categories: Optional[str] = None,
+    start_page: int = 1,   # NEW
 ):
     # normalize mode like Avito (support 'acheter' alias)
     mode = "vendre" if mode in ("vendre", "acheter") else "louer"
-    listing_type = normalize_listing_type(mode)  # NEW: get standardized type
+    listing_type = normalize_listing_type(mode)
 
-    print(f"[*] MUBAWAB | Mode={mode} (type={listing_type}) | Pages={num_pages} | Sink={sink} | Limit={max_items} | PerPage={per_page}")
-    links = crawl_serp(mode, num_pages, per_page, serp_delay)
+    # pick default categories if not provided
+    if not categories:
+        categories = CC_DEFAULT_CATEGORIES_SALE if mode == "vendre" else CC_DEFAULT_CATEGORIES_RENT
+
+    print(
+        f"[*] MUBAWAB CC | Mode={mode} (type={listing_type}) "
+        f"| StartPage={start_page} | Pages={num_pages} "
+        f"| Order=o:{order} | Categories={categories} "
+        f"| Sink={sink} | Limit={max_items} | PerPage={per_page}"
+    )
+
+    links = crawl_cc_serp(
+        mode,
+        num_pages,
+        per_page,
+        serp_delay,
+        order=order,
+        categories=categories,
+        start_page=start_page,
+    )
     if max_items is not None:
         links = links[:max_items]
     print(f"[*] Total links: {len(links)}")
@@ -314,7 +423,7 @@ def run_job(
 
     for i, u in enumerate(links, 1):
         print(f"[{i}/{len(links)}] {u}")
-        row = fetch_details(session, u, i, detail_delay, listing_type)  # NEW: pass listing_type
+        row = fetch_details(session, u, i, detail_delay, listing_type)
         rows.append(row)
         if producer:
             send_to_kafka(row, producer, kafka_topic)
@@ -331,7 +440,6 @@ def run_job(
                 w = csv.DictWriter(f, fieldnames=fieldnames, extrasaction="ignore", quoting=csv.QUOTE_ALL)
                 w.writeheader()
                 for r in rows:
-                    # basic cleanup
                     for k, v in list(r.items()):
                         if isinstance(v, str):
                             r[k] = re.sub(r"\s+", " ", v).strip()
@@ -344,7 +452,7 @@ def run_job(
 # CLI
 # ----------------------------
 if __name__ == "__main__":
-    ap = argparse.ArgumentParser(description="Scrape Mubawab listings (links + details).")
+    ap = argparse.ArgumentParser(description="Scrape Mubawab CC SERPs (all categories, newest first).")
     ap.add_argument("--mode", choices=["louer", "vendre", "acheter"], default="louer")
     ap.add_argument("--pages", type=int, default=1)
     ap.add_argument("--per-page", type=int, default=25)
@@ -355,6 +463,12 @@ if __name__ == "__main__":
     ap.add_argument("--topic", default=KAFKA_TOPIC_DEFAULT)
     ap.add_argument("--serp-delay", type=float, default=1.3)
     ap.add_argument("--detail-delay", type=float, default=1.3)
+    ap.add_argument("--order", default="n", help="Mubawab cc order flag (e.g., n=newest)")
+    ap.add_argument("--categories", default=None, help="Comma-separated cc categories (override defaults)")
+
+    # NEW: start page
+    ap.add_argument("--start-page", type=int, default=1)
+
     args = ap.parse_args()
 
     run_job(
@@ -368,4 +482,7 @@ if __name__ == "__main__":
         detail_delay=args.detail_delay,
         per_page=args.per_page,
         max_items=args.limit,
+        order=args.order,
+        categories=args.categories,
+        start_page=args.start_page,
     )

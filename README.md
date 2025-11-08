@@ -111,7 +111,7 @@ docker ps
 Create admin user (first time only):
 
 ```bash
-docker exec -it airflow-webserver bash -lc "airflow users create --username admin --firstname Admin --lastname User --role Admin --email admin@example.com --password admin"
+docker exec -it airflow-web bash -lc "airflow users create --username admin --firstname Admin --lastname User --role Admin --email admin@example.com --password admin"
 ```
 
 If you see "User already exists", skip this step.
@@ -259,7 +259,7 @@ docker exec -it spark-iceberg bash -lc '
 ```bash
 docker exec -it spark-iceberg bash -lc '
   export PYTHONPATH=/opt/work/src ;
-  nohup /opt/spark/bin/spark-submit \
+  /opt/spark/bin/spark-submit \
     --master local[*] \
     --conf spark.jars.ivy=/tmp/ivy \
     --conf spark.sql.shuffle.partitions=2 \
@@ -278,8 +278,7 @@ org.xerial.snappy:snappy-java:1.1.10.5 \
       --table rest.raw.avito \
       --checkpoint /opt/work/checkpoints/avito_raw \
       --starting-offsets latest \
-      --trigger 10s \
-    >> /opt/work/logs/avito_sink.log 2>&1 & echo $! > /opt/work/logs/avito_sink.pid
+      --trigger 10s
 '
 ```
 
@@ -288,7 +287,7 @@ org.xerial.snappy:snappy-java:1.1.10.5 \
 ```bash
 docker exec -it spark-iceberg bash -lc '
   export PYTHONPATH=/opt/work/src ;
-  nohup /opt/spark/bin/spark-submit \
+  /opt/spark/bin/spark-submit \
     --master local[*] \
     --conf spark.jars.ivy=/tmp/ivy \
     --conf spark.sql.shuffle.partitions=2 \
@@ -307,9 +306,9 @@ org.xerial.snappy:snappy-java:1.1.10.5 \
       --table rest.raw.mubawab \
       --checkpoint /opt/work/checkpoints/mubawab_raw \
       --starting-offsets latest \
-      --trigger 10s \
-    >> /opt/work/logs/mubawab_sink.log 2>&1 & echo $! > /opt/work/logs/mubawab_sink.pid
+      --trigger 10s
 '
+
 ```
 
 ### C) Check they're running
@@ -606,7 +605,6 @@ smart-estate-recommender-valuator/
 │       │   └── mubawab_consumer.py
 │       ├── load/
 │       │   ├── iceberg_kafka_sink.py
-│       │   └── silver_loader.py
 │       └── transform/
 │           ├── avito_raw_to_silver.py
 │           └── mubawab_raw_to_silver.py   # (if you intend to keep it)

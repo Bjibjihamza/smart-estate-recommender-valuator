@@ -6,16 +6,21 @@
 import argparse
 from pipeline.extract.mubawab_scraper import run_job
 
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--mode", choices=["louer", "vendre", "acheter"], default="louer")
     ap.add_argument("--pages", type=int, default=1)
     ap.add_argument("--limit", type=int, default=None)
-    ap.add_argument("--per-page", type=int, default=10)
+    ap.add_argument("--per-page", type=int, default=10000)
     ap.add_argument("--bootstrap", default="kafka:9092")
     ap.add_argument("--topic", default="realestate.mubawab.raw")
     ap.add_argument("--serp-delay", type=float, default=1.3)
     ap.add_argument("--detail-delay", type=float, default=1.3)
+
+    # NEW: start page
+    ap.add_argument("--start-page", type=int, default=1)
+
     args = ap.parse_args()
 
     run_job(
@@ -28,7 +33,9 @@ def main():
         detail_delay=args.detail_delay,
         per_page=args.per_page,
         max_items=args.limit,
+        start_page=args.start_page,
     )
+
 
 if __name__ == "__main__":
     main()
