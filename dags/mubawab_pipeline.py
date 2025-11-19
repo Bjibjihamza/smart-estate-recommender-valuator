@@ -10,8 +10,8 @@ from airflow.operators.python import BranchPythonOperator
 
 
 # ========= Parameters (tweak from Airflow UI Variables if you want) =========
-DEFAULT_PAGES = int(Variable.get("mubawab_pages", default_var="1"))
-DEFAULT_LIMIT = Variable.get("mubawab_limit", default_var="5")  # set to "None" to disable
+DEFAULT_PAGES = int(Variable.get("mubawab_pages", default_var="10"))
+DEFAULT_LIMIT = Variable.get("mubawab_limit", default_var="1000")  # set to "None" to disable
 FALLBACK_WINDOW_MINS = int(Variable.get("mubawab_window_mins", default_var="35"))
 
 # Re-use same dev scraper container if you wish

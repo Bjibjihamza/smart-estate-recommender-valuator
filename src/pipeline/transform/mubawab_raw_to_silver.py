@@ -2,7 +2,7 @@
 import argparse
 from pyspark.sql import SparkSession, Window
 from pyspark.sql.functions import (
-    col, trim, lit, when, split, from_json, row_number, lower
+    col, trim, lit, when, split, from_json, row_number, lower, expr
 )
 from pyspark.sql.types import *
 

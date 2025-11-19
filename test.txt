@@ -1,0 +1,874 @@
+i have those dags : # dags/mubawab_pipeline.py
+from __future__ import annotations
+
+from datetime import datetime, timedelta
+from airflow import DAG
+from airflow.models import Variable
+from airflow.operators.bash import BashOperator
+from airflow.operators.empty import EmptyOperator
+from airflow.operators.python import BranchPythonOperator
+
+
+# ========= Parameters (tweak from Airflow UI Variables if you want) =========
+DEFAULT_PAGES = int(Variable.get("mubawab_pages", default_var="2"))
+DEFAULT_LIMIT = Variable.get("mubawab_limit", default_var="100")  # set to "None" to disable
+FALLBACK_WINDOW_MINS = int(Variable.get("mubawab_window_mins", default_var="35"))
+
+# Re-use same dev scraper container if you wish
+SCRAPER_CONTAINER = Variable.get("scraper_container", default_var="avito-scraper")
+SPARK_CONTAINER = Variable.get("spark_container", default_var="spark-iceberg")
+
+CATALOG = Variable.get("iceberg_catalog", default_var="rest")
+KAFKA_BOOTSTRAP = Variable.get("kafka_bootstrap", default_var="kafka:9092")
+KAFKA_TOPIC = Variable.get("kafka_topic_mubawab", default_var="realestate.mubawab.raw")
+
+
+# ========================== Helpers ==========================
+def _make_scrape_cmd(mode: str, pages: int = DEFAULT_PAGES, limit: str | None = DEFAULT_LIMIT) -> str:
+    """Build the docker-exec command to run the Mubawab producer scraper."""
+    limit_part = f"--limit {limit} " if (limit and limit.lower() != "none") else ""
+    return (
+        f"docker exec -i {SCRAPER_CONTAINER} bash -lc '"
+        f"export PYTHONPATH=/app/src && "
+        f"python /app/src/pipeline/producer/mubawab_producer.py "
+        f"--mode {mode} --pages {pages} "
+        f"{limit_part}"
+        f"--bootstrap {KAFKA_BOOTSTRAP} --topic {KAFKA_TOPIC}'"
+    )
+
+
+def choose_and_toggle_mode() -> str:
+    """
+    Alternate between 'louer' and 'acheter' on each run using an Airflow Variable.
+    First run defaults to 'acheter' so we start by scraping 'louer'.
+    """
+    last_mode = Variable.get("mubawab_scraper_last_mode", default_var="acheter")
+    next_mode = "louer" if last_mode == "acheter" else "acheter"
+    Variable.set("mubawab_scraper_last_mode", next_mode)
+    return "scrape_louer" if next_mode == "louer" else "scrape_acheter"
+
+
+# ============================ DAG ============================
+default_args = {
+    "owner": "mubawab",
+    "depends_on_past": False,
+    "retries": 2,
+    "retry_delay": timedelta(minutes=2),
+}
+
+with DAG(
+    dag_id="mubawab_scraper",
+    default_args=default_args,
+    description="Scrape Mubawab → Kafka (RAW) → Spark transform → Iceberg Silver listings_all",
+    schedule="*/5 * * * *",  # every 5 minutes (aligned with Avito)
+    start_date=datetime(2025, 11, 2),
+    catchup=False,
+    max_active_runs=1,
+    tags=["mubawab", "scraper", "silver"],
+) as dag:
+
+    choose_mode = BranchPythonOperator(
+        task_id="choose_mode",
+        python_callable=choose_and_toggle_mode,
+    )
+
+    scrape_louer = BashOperator(
+        task_id="scrape_louer",
+        bash_command=_make_scrape_cmd("louer"),
+    )
+
+    scrape_acheter = BashOperator(
+        task_id="scrape_acheter",
+        bash_command=_make_scrape_cmd("acheter"),
+    )
+
+    scrape_done = EmptyOperator(
+        task_id="scrape_done",
+        trigger_rule="none_failed_min_one_success",
+    )
+
+    # Transform (append recent window) into rest.silver.listings_all
+    transform_to_silver = BashOperator(
+        task_id="transform_to_silver",
+        bash_command=(
+            f"docker exec -i {SPARK_CONTAINER} bash -lc "
+            "'export PYTHONPATH=/opt/work/src && "
+            "/opt/spark/bin/spark-submit --master local[*] "
+            "/opt/work/src/pipeline/transform/mubawab_raw_to_silver.py "
+            "--catalog rest --mode append --fallback-window-mins 35'"
+        ),
+    )
+
+
+    choose_mode >> [scrape_louer, scrape_acheter] >> scrape_done
+    scrape_done >> transform_to_silver   # dags/avito_pipeline.py
+from __future__ import annotations
+
+from datetime import datetime, timedelta
+from airflow import DAG
+from airflow.models import Variable
+from airflow.operators.bash import BashOperator
+from airflow.operators.empty import EmptyOperator
+from airflow.operators.python import BranchPythonOperator
+
+
+# ========= Parameters (tweak from Airflow UI Variables if you want) =========
+DEFAULT_PAGES = int(Variable.get("avito_pages", default_var="2"))
+DEFAULT_LIMIT = Variable.get("avito_limit", default_var="100")  # set to "None" to disable
+FALLBACK_WINDOW_MINS = int(Variable.get("avito_window_mins", default_var="35"))
+
+SCRAPER_CONTAINER = Variable.get("scraper_container", default_var="avito-scraper")
+SPARK_CONTAINER = Variable.get("spark_container", default_var="spark-iceberg")
+
+CATALOG = Variable.get("iceberg_catalog", default_var="rest")
+KAFKA_BOOTSTRAP = Variable.get("kafka_bootstrap", default_var="kafka:9092")
+KAFKA_TOPIC = Variable.get("kafka_topic_avito", default_var="realestate.avito.raw")
+
+
+# ========================== Helpers ==========================
+def _make_scrape_cmd(mode: str, pages: int = DEFAULT_PAGES, limit: str | None = DEFAULT_LIMIT) -> str:
+    """Build the docker-exec command to run the Avito producer scraper."""
+    limit_part = f"--limit {limit} " if (limit and limit.lower() != "none") else ""
+    return (
+        f"docker exec -i {SCRAPER_CONTAINER} bash -lc '"
+        f"export PYTHONPATH=/app/src && "
+        f"python /app/src/pipeline/producer/avito_producer.py "
+        f"--mode {mode} --pages {pages} "
+        f"{limit_part}"
+        f"--bootstrap {KAFKA_BOOTSTRAP} --topic {KAFKA_TOPIC}'"
+    )
+
+
+def choose_and_toggle_mode() -> str:
+    """
+    Alternate between 'louer' and 'acheter' on each run using an Airflow Variable.
+    First run defaults to 'acheter' so we start by scraping 'louer'.
+    """
+    last_mode = Variable.get("avito_scraper_last_mode", default_var="acheter")
+    next_mode = "louer" if last_mode == "acheter" else "acheter"
+    Variable.set("avito_scraper_last_mode", next_mode)
+    return "scrape_louer" if next_mode == "louer" else "scrape_acheter"
+
+
+# ============================ DAG ============================
+default_args = {
+    "owner": "avito",
+    "depends_on_past": False,
+    "retries": 2,
+    "retry_delay": timedelta(minutes=2),
+}
+
+with DAG(
+    dag_id="avito_scraper",
+    default_args=default_args,
+    description="Scrape Avito → Kafka (RAW) → Spark transform → Iceberg Silver listings_all",
+    schedule="*/5 * * * *",  # every 5 minutes
+    start_date=datetime(2025, 11, 2),
+    catchup=False,
+    max_active_runs=1,
+    tags=["avito", "scraper", "silver"],
+) as dag:
+
+    choose_mode = BranchPythonOperator(
+        task_id="choose_mode",
+        python_callable=choose_and_toggle_mode,
+    )
+
+    scrape_louer = BashOperator(
+        task_id="scrape_louer",
+        bash_command=_make_scrape_cmd("louer"),
+    )
+
+    scrape_acheter = BashOperator(
+        task_id="scrape_acheter",
+        bash_command=_make_scrape_cmd("acheter"),
+    )
+
+    scrape_done = EmptyOperator(
+        task_id="scrape_done",
+        trigger_rule="none_failed_min_one_success",
+    )
+
+    # Transform (append recent window) into rest.silver.listings_all
+    transform_to_silver = BashOperator(
+        task_id="transform_to_silver",
+        bash_command=(
+            f"docker exec -i {SPARK_CONTAINER} bash -lc "
+            "'export PYTHONPATH=/opt/work/src && "
+            "/opt/spark/bin/spark-submit --master local[*] "
+            "/opt/work/src/pipeline/transform/avito_raw_to_silver.py "
+            "--catalog rest --mode append --fallback-window-mins 35'"
+        ),
+    )
+
+
+    choose_mode >> [scrape_louer, scrape_acheter] >> scrape_done
+    scrape_done >> transform_to_silver   they use thoe transformes  :  #!/usr/bin/env python3
+import argparse
+from datetime import timedelta
+from pyspark.sql import SparkSession, Window
+from pyspark.sql.functions import (
+    col, trim, lit, when, length, regexp_replace, from_json, split, size,
+    expr, array_position, element_at, coalesce, lower, row_number
+)
+from pyspark.sql.types import *
+
+UNIFIED_COLS = [
+    "id","url","error","ingest_ts","site","offre","price","title","seller",
+    "published_date","city","neighborhood","property_type","images","equipments",
+    "description_text","offre_match","surface_habitable","caution","zoning",
+    "type_d_appartement","standing","surface_totale","etage","age_du_bien",
+    "nombre_de_pieces","chambres","salle_de_bain","frais_de_syndic_mois",
+    "condition","nombre_d_etage","disponibilite","salons",
+    # Mubawab-specific that Avito doesn't have → NULLs
+    "features_amenities_json","type_de_bien","surface_de_la_parcelle",
+    "type_du_sol","etage_du_bien","annees","orientation","etat"
+]
+
+def build_spark():
+    return (
+        SparkSession.builder.appName("avito_raw_to_silver")
+        .config("spark.sql.extensions","org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions")
+        .config("spark.sql.catalog.rest","org.apache.iceberg.spark.SparkCatalog")
+        .config("spark.sql.catalog.rest.type","rest")
+        .config("spark.sql.catalog.rest.uri","http://iceberg-rest:8181")
+        .config("spark.sql.catalog.rest.warehouse","s3://lake/warehouse")
+        .config("spark.sql.catalog.rest.io-impl","org.apache.iceberg.aws.s3.S3FileIO")
+        .config("spark.sql.catalog.rest.s3.endpoint","http://minio:9000")
+        .config("spark.sql.catalog.rest.s3.path-style-access","true")
+        .config("spark.sql.catalog.rest.s3.access-key-id","admin")
+        .config("spark.sql.catalog.rest.s3.secret-access-key","admin123")
+        .config("spark.sql.catalog.rest.s3.region","us-east-1")
+        .getOrCreate()
+    )
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--catalog", default="rest")
+    ap.add_argument("--mode", choices=["append"], default="append")
+    ap.add_argument("--fallback-window-mins", type=int, default=35)
+    args = ap.parse_args()
+
+    spark = build_spark()
+
+    # ---- Read RAW
+    raw = spark.table(f"{args.catalog}.raw.avito")
+
+    # ---- Parse payload
+    payload_schema = StructType([
+        StructField("id", StringType()),
+        StructField("url", StringType()),
+        StructField("error", StringType()),
+        StructField("title", StringType()),
+        StructField("price_text", StringType()),
+        StructField("breadcrumbs", StringType()),
+        StructField("category", StringType()),
+        StructField("description", StringType()),
+        StructField("attributes", StringType()),
+        StructField("equipments", StringType()),
+        StructField("seller_name", StringType()),
+        StructField("seller_type", StringType()),
+        StructField("published_date", StringType()),
+        StructField("image_urls", StringType()),
+        StructField("listing_type", StringType()),
+    ])
+
+    df = (
+        raw
+        .withColumn("json", from_json(col("payload"), payload_schema))
+        .select(col("ingest_ts"), col("json.*"))
+    )
+
+    # ---- Dedup by latest ingest_ts per id
+    w = Window.partitionBy("id").orderBy(col("ingest_ts").desc())
+    df = df.withColumn("rn", row_number().over(w)).filter(col("rn")==1).drop("rn")
+
+    # ---- Keep valid URL
+    df = df.filter((col("url").isNotNull()) & (trim(col("url"))!=""))
+
+    # ---- price
+    df = df.withColumn(
+        "price",
+        when((col("price_text").isNull()) | (length(col("price_text"))==0), lit(None).cast("double"))
+        .otherwise(
+            regexp_replace(
+              regexp_replace(
+                regexp_replace(col("price_text"), u"\u00A0",""),
+                r"[ ,]",""
+              ),
+              r"[^0-9.]", ""
+            ).cast("double")
+        )
+    ).drop("price_text")
+
+    # ---- seller
+    df = (
+        df.withColumn(
+            "seller",
+            when(
+                (col("seller_name").isNull()) | (trim(col("seller_name"))=="") |
+                (lower(trim(col("seller_name"))).isin("null","none","unknown")),
+                "unknown"
+            ).otherwise(lower(trim(col("seller_name"))))
+        ).drop("seller_name","seller_type")
+    )
+
+    # ---- images
+    df = df.withColumn(
+        "images",
+        expr("FILTER(TRANSFORM(SPLIT(image_urls, '\\\\s*\\\\|\\\\s*'), x -> TRIM(x)), x -> x <> '')")
+    ).drop("image_urls")
+
+    # ---- equipments (array)
+    df = df.withColumn(
+        "equipments",
+        expr("""
+          CASE WHEN equipments IS NULL THEN array()
+          ELSE array_distinct(
+            FILTER(
+              TRANSFORM(SPLIT(equipments, '\\s*;\\s*'), x -> trim(x)),
+              x -> x <> '' AND x RLIKE '.*[A-Za-zÀ-ÿ].*'
+                   AND NOT (x RLIKE '.*[0-9].*')
+                   AND NOT (lower(x) RLIKE '.*moi.*')
+                   AND NOT (lower(x) RLIKE '^(aucune|studio)$')
+            )
+          )
+          END
+        """)
+    )
+
+    # ---- offre
+    df = df.withColumnRenamed("listing_type","offre")
+
+    # ---- city/neighborhood from breadcrumbs
+    parts = split(coalesce(col("breadcrumbs"), lit("")), " > ")
+    idx = array_position(parts, "Tout le Maroc")
+    df = (
+        df
+        .withColumn(
+            "city",
+            when((idx>lit(0)) & (size(parts) >= (idx+lit(1))),
+                 trim(element_at(parts, (idx+lit(1)).cast("int"))))
+        )
+        .withColumn(
+            "neighborhood_raw",
+            when((idx>lit(0)) & (size(parts) >= (idx+lit(2))),
+                 trim(element_at(parts, (idx+lit(2)).cast("int"))))
+        )
+    )
+    bad_neigh = ["Avito Immobilier","أفيتو للعقار","Toute la ville","Autre secteur"]
+    df = df.withColumn("neighborhood",
+                       when(col("neighborhood_raw").isin(bad_neigh), None)
+                       .otherwise(col("neighborhood_raw"))).drop("neighborhood_raw")
+
+    # ---- site
+    df = df.withColumn("site", lit("avito"))
+
+    # ---- property_type + listing phrase from category
+    parts = split(coalesce(col("category"), lit("")), r"\s*,\s*")
+    df = (
+        df.withColumn("property_type", when(size(parts)>=1, trim(parts.getItem(0))))
+          .withColumn("listing_phrase", when(size(parts)>=2, trim(parts.getItem(1))))
+    )
+
+    # expected listing
+    df = (
+        df.withColumn(
+            "listing_expected",
+            when(col("listing_phrase").isin("à louer","a louer"), lit("location"))
+            .when(col("listing_phrase").isin("à vendre","a vendre"), lit("vente"))
+        )
+        .withColumn("offre_match", when(col("listing_expected")==col("offre"), lit(True)).otherwise(lit(False)))
+        .drop("category","listing_phrase","listing_expected")
+    )
+
+    # ---- attributes → dynamic columns (keep exact values)
+    attr_map = from_json(col("attributes"), MapType(StringType(), StringType()))
+    df = df.withColumn("attr_map", attr_map)
+    keys = [r["k"] for r in df.selectExpr("explode(map_keys(attr_map)) as k").distinct().collect() if r["k"]]
+
+    import unicodedata, re
+    def sanitize(name:str)->str:
+        name = unicodedata.normalize("NFKD", name).encode("ascii","ignore").decode("ascii")
+        name = re.sub(r"[^0-9a-zA-Z]+","_",name).strip("_")
+        return name.lower()
+
+    for k in keys:
+        df = df.withColumn(sanitize(k), trim(col("attr_map")[k]))
+    df = df.drop("attr_map")  # keep raw 'attributes' to drop later per your rule
+
+    # ---- FINAL projection to unified schema
+    # description -> description_text; drop breadcrumbs/attributes
+    final = df.select(
+        col("id"), col("url"), col("error"), col("ingest_ts"), col("site"),
+        col("offre"), col("price"), col("title"), col("seller"),
+        col("published_date"), col("city"), col("neighborhood"),
+        col("property_type"), col("images"), col("equipments"),
+        col("description").alias("description_text"),
+        col("offre_match"),
+        # extracted attribute fields if present:
+        col(sanitize("Surface habitable")).alias("surface_habitable") if "surface_habitable" in df.columns else lit(None).alias("surface_habitable"),
+        col(sanitize("Caution")).alias("caution") if "caution" in df.columns else lit(None).alias("caution"),
+        col(sanitize("Zoning")).alias("zoning") if "zoning" in df.columns else lit(None).alias("zoning"),
+        col(sanitize("Type d'appartement")).alias("type_d_appartement") if "type_d_appartement" in df.columns else lit(None).alias("type_d_appartement"),
+        col(sanitize("Standing")).alias("standing") if "standing" in df.columns else lit(None).alias("standing"),
+        col(sanitize("Surface totale")).alias("surface_totale") if "surface_totale" in df.columns else lit(None).alias("surface_totale"),
+        col(sanitize("Étage")).alias("etage") if "etage" in df.columns else lit(None).alias("etage"),
+        col(sanitize("Âge du bien")).alias("age_du_bien") if "age_du_bien" in df.columns else lit(None).alias("age_du_bien"),
+        col(sanitize("Nombre de pièces")).alias("nombre_de_pieces") if "nombre_de_pieces" in df.columns else lit(None).alias("nombre_de_pieces"),
+        col(sanitize("Chambres")).alias("chambres") if "chambres" in df.columns else lit(None).alias("chambres"),
+        col(sanitize("Salle de bain")).alias("salle_de_bain") if "salle_de_bain" in df.columns else lit(None).alias("salle_de_bain"),
+        col(sanitize("Frais de syndic / mois")).alias("frais_de_syndic_mois") if "frais_de_syndic_mois" in df.columns else lit(None).alias("frais_de_syndic_mois"),
+        col(sanitize("Condition")).alias("condition") if "condition" in df.columns else lit(None).alias("condition"),
+        col(sanitize("Nombre d'étage")).alias("nombre_d_etage") if "nombre_d_etage" in df.columns else lit(None).alias("nombre_d_etage"),
+        col(sanitize("Disponibilité")).alias("disponibilite") if "disponibilite" in df.columns else lit(None).alias("disponibilite"),
+        col(sanitize("Salons")).alias("salons") if "salons" in df.columns else lit(None).alias("salons"),
+        # Mubawab-only fields → NULLs
+        lit(None).cast("string").alias("features_amenities_json"),
+        lit(None).cast("string").alias("type_de_bien"),
+        lit(None).cast("string").alias("surface_de_la_parcelle"),
+        lit(None).cast("string").alias("type_du_sol"),
+        lit(None).cast("string").alias("etage_du_bien"),
+        lit(None).cast("string").alias("annees"),
+        lit(None).cast("string").alias("orientation"),
+        lit(None).cast("string").alias("etat"),
+    )
+
+    # Optional: window filter (if table large)
+    if args.fallback_window_mins and args.fallback_window_mins > 0:
+        final = final.where(col("ingest_ts") >= expr(f"timestampadd(MINUTE, -{args.fallback_window_mins}, current_timestamp())"))
+
+    # ---- Append into unified table
+    final.select(*UNIFIED_COLS).writeTo(f"{args.catalog}.silver.listings_all").append()
+
+    spark.stop()
+
+if __name__ == "__main__":
+    main()   #!/usr/bin/env python3
+import argparse
+from pyspark.sql import SparkSession, Window
+from pyspark.sql.functions import (
+    col, trim, lit, when, split, from_json, row_number, lower
+)
+from pyspark.sql.types import *
+
+UNIFIED_COLS = [
+    "id","url","error","ingest_ts","site","offre","price","title","seller",
+    "published_date","city","neighborhood","property_type","images","equipments",
+    "description_text","offre_match","surface_habitable","caution","zoning",
+    "type_d_appartement","standing","surface_totale","etage","age_du_bien",
+    "nombre_de_pieces","chambres","salle_de_bain","frais_de_syndic_mois",
+    "condition","nombre_d_etage","disponibilite","salons",
+    "features_amenities_json","type_de_bien","surface_de_la_parcelle",
+    "type_du_sol","etage_du_bien","annees","orientation","etat"
+]
+
+def build_spark():
+    return (
+        SparkSession.builder.appName("mubawab_raw_to_silver")
+        .config("spark.sql.extensions","org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions")
+        .config("spark.sql.catalog.rest","org.apache.iceberg.spark.SparkCatalog")
+        .config("spark.sql.catalog.rest.type","rest")
+        .config("spark.sql.catalog.rest.uri","http://iceberg-rest:8181")
+        .config("spark.sql.catalog.rest.warehouse","s3://lake/warehouse")
+        .config("spark.sql.catalog.rest.io-impl","org.apache.iceberg.aws.s3.S3FileIO")
+        .config("spark.sql.catalog.rest.s3.endpoint","http://minio:9000")
+        .config("spark.sql.catalog.rest.s3.path-style-access","true")
+        .config("spark.sql.catalog.rest.s3.access-key-id","admin")
+        .config("spark.sql.catalog.rest.s3.secret-access-key","admin123")
+        .config("spark.sql.catalog.rest.s3.region","us-east-1")
+        .getOrCreate()
+    )
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--catalog", default="rest")
+    ap.add_argument("--mode", choices=["append"], default="append")
+    ap.add_argument("--fallback-window-mins", type=int, default=35)
+    args = ap.parse_args()
+
+    spark = build_spark()
+
+    raw = spark.table(f"{args.catalog}.raw.mubawab")
+
+    payload_schema = StructType([
+        StructField("id", StringType()),
+        StructField("url", StringType()),
+        StructField("error", StringType()),
+        StructField("listing_type", StringType()),
+        StructField("title", StringType()),
+        StructField("price", DoubleType()),
+        StructField("location_text", StringType()),
+        StructField("features_amenities_json", StringType()),
+        StructField("description_text", StringType()),
+        StructField("features_main_json", StringType()),
+        StructField("gallery_urls", StringType()),
+        StructField("agency_name", StringType()),
+        StructField("agency_url", StringType()),
+        StructField("published_date", StringType()),
+    ])
+
+    df = (
+        raw
+        .withColumn("j", from_json(col("payload"), payload_schema))
+        .select(col("ingest_ts"), col("j.*"))
+    )
+
+    # Dedup latest per id
+    w = Window.partitionBy("id").orderBy(col("ingest_ts").desc())
+    df = df.withColumn("rn", row_number().over(w)).filter(col("rn")==1).drop("rn")
+
+    # URL valid
+    df = df.filter((col("url").isNotNull()) & (trim(col("url"))!=""))
+
+    # Price: keep >0 else NULL
+    df = df.withColumn("price", when((col("price")<=0) | col("price").isNull(), lit(None)).otherwise(col("price")))
+
+    # seller from agency_name (lower/trim), drop agency fields (you asked to drop agency_url)
+    df = (
+        df.withColumn(
+            "seller",
+            when(
+                (col("agency_name").isNull()) | (trim(col("agency_name"))=="") |
+                (lower(trim(col("agency_name"))).isin("nan","null","unknown")),
+                "unknown"
+            ).otherwise(lower(trim(col("agency_name"))))
+        )
+        .drop("agency_name","agency_url")
+    )
+
+    # images from gallery_urls JSON array
+    df = df.withColumn("images", from_json(col("gallery_urls"), ArrayType(StringType()))).drop("gallery_urls")
+
+    # equipments: parse, keep as-is (you already normalized earlier in notebooks; here we keep extraction only)
+    # Just project features_amenities_json through; you can transform later if needed
+    df = df.withColumn("equipments", lit(None).cast("array<string>"))  # keep simple (extraction-only step)
+    # If you want the array now: from_json(features_amenities_json, array<string>)
+
+    # offre
+    df = df.withColumnRenamed("listing_type","offre")
+
+    # city / neighborhood from "A à B"
+    parts = split(col("location_text"), " à ")
+    df = (
+        df.withColumn("neighborhood", trim(parts.getItem(0)))
+          .withColumn("city", trim(parts.getItem(1)))
+    )
+    df = df.withColumn("city", when(col("city").isNull(), col("neighborhood")).otherwise(col("city"))).drop("location_text")
+
+    # site
+    df = df.withColumn("site", lit("mubawab"))
+
+    # property_type from features_main_json["Type de bien"] and explode ALL keys into columns
+    feat_map = from_json(col("features_main_json"), MapType(StringType(), StringType()))
+    df = df.withColumn("features_map", feat_map).withColumn("property_type", col("features_map")["Type de bien"])
+
+    keys = [r["k"] for r in df.selectExpr("explode(map_keys(features_map)) as k").distinct().collect() if r["k"]]
+    import unicodedata, re
+    def sanitize(name:str)->str:
+        name = unicodedata.normalize("NFKD", name).encode("ascii","ignore").decode("ascii")
+        name = re.sub(r"[^0-9a-zA-Z]+","_",name).strip("_")
+        return name.lower()
+    for k in keys:
+        df = df.withColumn(sanitize(k), trim(col("features_map")[k]))
+    df = df.drop("features_map","features_main_json")  # drop raw JSON as requested
+
+    # Final projection to unified schema (no breadcrumbs/attributes, description already description_text)
+    final = df.select(
+        "id","url","error","ingest_ts","site","offre","price","title","seller",
+        "published_date","city","neighborhood","property_type","images",
+        "equipments","description_text",
+        # Avito-only fields (NULLs here)
+        lit(None).cast("boolean").alias("offre_match"),
+        lit(None).cast("string").alias("surface_habitable"),
+        lit(None).cast("string").alias("caution"),
+        lit(None).cast("string").alias("zoning"),
+        lit(None).cast("string").alias("type_d_appartement"),
+        lit(None).cast("string").alias("standing"),
+        lit(None).cast("string").alias("surface_totale"),
+        lit(None).cast("string").alias("etage"),
+        lit(None).cast("string").alias("age_du_bien"),
+        lit(None).cast("string").alias("nombre_de_pieces"),
+        lit(None).cast("string").alias("chambres"),
+        lit(None).cast("string").alias("salle_de_bain"),
+        lit(None).cast("string").alias("frais_de_syndic_mois"),
+        lit(None).cast("string").alias("condition"),
+        lit(None).cast("string").alias("nombre_d_etage"),
+        lit(None).cast("string").alias("disponibilite"),
+        lit(None).cast("string").alias("salons"),
+        # Mubawab specifics (keep these if present)
+        col("features_amenities_json"),
+        col(sanitize("Type de bien")).alias("type_de_bien") if "type_de_bien" in df.columns else lit(None).cast("string").alias("type_de_bien"),
+        col(sanitize("Surface de la parcelle")).alias("surface_de_la_parcelle") if "surface_de_la_parcelle" in df.columns else lit(None).cast("string").alias("surface_de_la_parcelle"),
+        col(sanitize("Type du sol")).alias("type_du_sol") if "type_du_sol" in df.columns else lit(None).cast("string").alias("type_du_sol"),
+        col(sanitize("Étage du bien")).alias("etage_du_bien") if "etage_du_bien" in df.columns else lit(None).cast("string").alias("etage_du_bien"),
+        col(sanitize("Années")).alias("annees") if "annees" in df.columns else lit(None).cast("string").alias("annees"),
+        col(sanitize("Orientation")).alias("orientation") if "orientation" in df.columns else lit(None).cast("string").alias("orientation"),
+        col(sanitize("Etat")).alias("etat") if "etat" in df.columns else lit(None).cast("string").alias("etat"),
+    )
+
+    if args.fallback_window_mins and args.fallback_window_mins > 0:
+        final = final.where(col("ingest_ts") >= expr(f"timestampadd(MINUTE, -{args.fallback_window_mins}, current_timestamp())"))
+
+    final.select(*UNIFIED_COLS).writeTo(f"{args.catalog}.silver.listings_all").append()
+
+    spark.stop()
+
+if __name__ == "__main__":
+    main()  the evito ca marche bien  [2025-11-19, 15:55:59 +01] {subprocess.py:93} INFO - 25/11/19 14:55:59 INFO Executor: Running task 6.0 in stage 0.0 (TID 6)
+[2025-11-19, 15:55:59 +01] {subprocess.py:93} INFO - 25/11/19 14:55:59 INFO TaskSetManager: Starting task 7.0 in stage 0.0 (TID 7) (78ee41eacf6b, executor driver, partition 7, PROCESS_LOCAL, 13059 bytes)
+[2025-11-19, 15:55:59 +01] {subprocess.py:93} INFO - 25/11/19 14:55:59 INFO Executor: Running task 7.0 in stage 0.0 (TID 7)
+[2025-11-19, 15:55:59 +01] {subprocess.py:93} INFO - 25/11/19 14:55:59 INFO TaskSetManager: Finished task 0.0 in stage 0.0 (TID 0) in 3669 ms on 78ee41eacf6b (executor driver) (1/8)
+[2025-11-19, 15:55:59 +01] {subprocess.py:93} INFO - 25/11/19 14:55:59 INFO TaskSetManager: Finished task 5.0 in stage 0.0 (TID 5) in 3605 ms on 78ee41eacf6b (executor driver) (2/8)
+....1/19 14:56:01 INFO DAGScheduler: Job 2 is finished. Cancelling potential speculative or zombie tasks for this job
+[2025-11-19, 15:56:01 +01] {subprocess.py:93} INFO - 25/11/19 14:56:01 INFO TaskSchedulerImpl: Killing all running tasks in stage 5: Stage finished
+[2025-11-19, 15:56:01 +01] {subprocess.py:93} INFO - 25/11/19 14:56:01 INFO DAGScheduler: Job 2 finished: collect at /opt/work/src/pipeline/transform/avito_raw_to_silver.py:183, took 0.240304 s
+[2025-11-19, 15:56:02 +01] {subprocess.py:93} INFO - 25/11/19 14:56:02 INFO BlockManagerInfo: Removed broadcast_4_piece0 on 78ee41eacf6b:42451 in memory (size: 24.7 KiB, free: 434.4 MiB)
+[2025-11-19, 15:56:03 +01] {subprocess.py:93} INFO - 25/11/19 14:56:03 INFO V2ScanRelationPushDown:
+[2025-11-19, 15:56:03 +01] {subprocess.py:93} INFO - Output: payload#1, ingest_ts#2
+[2025-11-19, 15:56:03 +01] {subprocess.py:93} INFO - 
+[2025-11-19, 15:56:03 +01] {subprocess.py:93} INFO - 25/11/19 14:56:03 INFO SnapshotScan: Scanning table rest.raw.avito snapshot 920950610481781974 created at 2025-11-19T14:55:31.303+00:00 with filter true
+[2025-11-19, 15:56:03 +01] {subprocess.py:93} INFO - 25/11/19 14:56:03 INFO BaseDistributedDataScan: Planning file tasks locally for table rest.raw.avito
+[2025-11-.... INFO SnapshotProducer: Committed snapshot 4967676586051996325 (MergeAppend)
+[2025-11-19, 15:56:09 +01] {subprocess.py:93} INFO - 25/11/19 14:56:09 INFO LoggingMetricsReporter: Received metrics report: CommitReport{tableName=rest.silver.listings_all, snapshotId=4967676586051996325, sequenceNumber=8, operation=append, commitMetrics=CommitMetricsResult{totalDuration=TimerResult{timeUnit=NANOSECONDS, totalDuration=PT0.48447025S, count=1}, attempts=CounterResult{unit=COUNT, value=1}, addedDataFiles=CounterResult{unit=COUNT, value=1}, removedDataFiles=null, totalDataFiles=CounterResult{unit=COUNT, value=7}, addedDeleteFiles=null, addedEqualityDeleteFiles=null, addedPositionalDeleteFiles=null, removedDeleteFiles=null, removedEqualityDeleteFiles=null, removedPositionalDeleteFiles=null, totalDeleteFiles=CounterResult{unit=COUNT, value=0}, addedRecords=CounterResult{unit=COUNT, value=88}, removedRecords=null, totalRecords=CounterResult{unit=COUNT, value=139}, addedFilesSizeInBytes=CounterResult{unit=BYTES, value=40160}, removedFilesSizeInBytes=null, totalFilesSizeInBytes=CounterResult{unit=BYTES, value=131129}, addedPositionalDeletes=null, removedPositionalDeletes=null, totalPositionalDeletes=CounterResult{unit=COUNT, value=0}, addedEqualityDeletes=null, removedEqualityDeletes=null, totalEqualityDeletes=CounterResult{unit=COUNT, value=0}}, metadata={engine-version=3.5.1, app-id=local-1763564137014, engine-name=spark, iceberg-version=Apache Iceberg 1.6.0 (commit 229d8f6fcd109e6c8943ea7cbb41dab746c6d0ed)}}
+[2025-11-19, 15:56:09 +01] {subprocess.py:93} INFO - 25/11/19 14:56:09 INFO SparkWrite: Committed in 523 ms
+[2025-11-19, 15:56:09 +01] {subprocess.py:93} INFO - 25/11/19 14:56:09 INFO AppendDataExec: Data source write support IcebergBatchWrite(table=rest.silver.listings_all, format=PARQUET) committed.
+[2025-11-19, 15:56:09 +01] {subprocess.py:93} INFO - 25/11/19 14:56:09 INFO SparkContext: SparkContext is stopping with exitCode 0.
+[2025-11-19, 15:56:09 +01] {subprocess.py:93} INFO - 25/11/19 14:56:09 INFO SparkUI: Stopped Spark web UI at http://78ee41eacf6b:4042
+[2025-11-19, 15:56:09 +01] {subprocess.py:93} INFO - 25/11/19 14:56:09 INFO MapOutputTrackerMasterEndpoint: MapOutputTrackerMasterEndpoint stopped!
+[2025-11-19, 15:56:09 +01] {subprocess.py:93} INFO - 25/11/19 14:56:09 INFO MemoryStore: MemoryStore cleared
+[2025-11-19, 15:56:09 +01] {subprocess.py:93} INFO - 25/11/19 14:56:09 INFO BlockManager: BlockManager stopped
+[2025-11-19, 15:56:09 +01] {subprocess.py:93} INFO - 25/11/19 14:56:09 INFO BlockManagerMaster: BlockManagerMaster stopped
+[2025-11-19, 15:56:09 +01] {subprocess.py:93} INFO - 25/11/19 14:56:09 INFO OutputCommitCoordinator$OutputCommitCoordinatorEndpoint: OutputCommitCoordinator stopped!
+[2025-11-19, 15:56:09 +01] {subprocess.py:93} INFO - 25/11/19 14:56:09 INFO SparkContext: Successfully stopped SparkContext
+[2025-11-19, 15:56:09 +01] {subprocess.py:93} INFO - 25/11/19 14:56:09 INFO ShutdownHookManager: Shutdown hook called
+[2025-11-19, 15:56:09 +01] {subprocess.py:93} INFO - 25/11/19 14:56:09 INFO ShutdownHookManager: Deleting directory /tmp/spark-d5ecb323-d0cc-49b8-82dd-f16a25334d2b
+[2025-11-19, 15:56:09 +01] {subprocess.py:93} INFO - 25/11/19 14:56:09 INFO ShutdownHookManager: Deleting directory /tmp/spark-d5ecb323-d0cc-49b8-82dd-f16a25334d2b/pyspark-3e2418b9-adef-4ea9-b910-8585a82a3397
+[2025-11-19, 15:56:09 +01] {subprocess.py:93} INFO - 25/11/19 14:56:09 INFO ShutdownHookManager: Deleting directory /tmp/spark-07a6c12e-9d58-4f99-a2a2-930189ed6dc7
+[2025-11-19, 15:56:09 +01] {subprocess.py:97} INFO - Command exited with return code 0
+[2025-11-19, 15:56:09 +01] {taskinstance.py:441} ▶ Post task execution logs but in mubwab i have this problm  :  db47851fe087
+*** Found local files:
+***   * /opt/airflow/logs/dag_id=mubawab_scraper/run_id=manual__2025-11-19T14:52:22.956298+00:00/task_id=transform_to_silver/attempt=3.log
+[2025-11-19, 15:58:17 +01] {local_task_job_runner.py:120} ▶ Pre task execution logs
+[2025-11-19, 15:58:17 +01] {subprocess.py:63} INFO - Tmp dir root location: /tmp
+[2025-11-19, 15:58:17 +01] {subprocess.py:75} INFO - Running command: ['/usr/bin/bash', '-c', "docker exec -i spark-iceberg bash -lc 'export PYTHONPATH=/opt/work/src && /opt/spark/bin/spark-submit --master local[*] /opt/work/src/pipeline/transform/mubawab_raw_to_silver.py --catalog rest --mode append --fallback-window-mins 35'"]
+[2025-11-19, 15:58:17 +01] {subprocess.py:86} INFO - Output:
+[2025-11-19, 15:58:22 +01] {subprocess.py:93} INFO - 25/11/19 14:58:22 INFO SparkContext: Running Spark version 3.5.1
+[2025-11-19, 15:58:22 +01] {subprocess.py:93} INFO - 25/11/19 14:58:22 INFO SparkContext: OS info Linux, 6.6.87.2-microsoft-standard-WSL2, amd64
+[2025-11-19, 15:58:22 +01] {subprocess.py:93} INFO - 25/11/19 14:58:22 INFO SparkContext: Java version 11.0.22
+[2025-11-19, 15:58:22 +01] {subprocess.py:93} INFO - 25/11/19 14:58:22 WARN NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+[2025-11-19, 15:58:22 +01] {subprocess.py:93} INFO - 25/11/19 14:58:22 INFO ResourceUtils: ==============================================================
+[2025-11-19, 15:58:22 +01] {subprocess.py:93} INFO - 25/11/19 14:58:22 INFO ResourceUtils: No custom resources configured for spark.driver.
+[2025-11-19, 15:58:22 +01] {subprocess.py:93} INFO - 25/11/19 14:58:22 INFO ResourceUtils: ==============================================================
+[2025-11-19, 15:58:22 +01] {subprocess.py:93} INFO - 25/11/19 14:58:22 INFO SparkContext: Submitted application: mubawab_raw_to_silver
+[2025-11-19, 15:58:23 +01] {subprocess.py:93} INFO - 25/11/19 14:58:23 INFO ResourceProfile: Default ResourceProfile created, executor resources: Map(cores -> name: cores, amount: 1, script: , vendor: , memory -> name: memory, amount: 1024, script: , vendor: , offHeap -> name: offHeap, amount: 0, script: , vendor: ), task resources: Map(cpus -> name: cpus, amount: 1.0)
+[2025-11-19, 15:58:23 +01] {subprocess.py:93} INFO - 25/11/19 14:58:23 INFO ResourceProfile: Limiting resource is cpu
+[2025-11-19, 15:58:23 +01] {subprocess.py:93} INFO - 25/11/19 14:58:23 INFO ResourceProfileManager: Added ResourceProfile id: 0
+[2025-11-19, 15:58:23 +01] {subprocess.py:93} INFO - 25/11/19 14:58:23 INFO SecurityManager: Changing view acls to: spark
+[2025-11-19, 15:58:23 +01] {subprocess.py:93} INFO - 25/11/19 14:58:23 INFO SecurityManager: Changing modify acls to: spark
+[2025-11-19, 15:58:23 +01] {subprocess.py:93} INFO - 25/11/19 14:58:23 INFO SecurityManager: Changing view acls groups to:
+[2025-11-19, 15:58:23 +01] {subprocess.py:93} INFO - 25/11/19 14:58:23 INFO SecurityManager: Changing modify acls groups to:
+[2025-11-19, 15:58:23 +01] {subprocess.py:93} INFO - 25/11/19 14:58:23 INFO SecurityManager: SecurityManager: authentication disabled; ui acls disabled; users with view permissions: spark; groups with view permissions: EMPTY; users with modify permissions: spark; groups with modify permissions: EMPTY
+[2025-11-19, 15:58:23 +01] {subprocess.py:93} INFO - 25/11/19 14:58:23 INFO Utils: Successfully started service 'sparkDriver' on port 39065.
+[2025-11-19, 15:58:23 +01] {subprocess.py:93} INFO - 25/11/19 14:58:23 INFO SparkEnv: Registering MapOutputTracker
+[2025-11-19, 15:58:23 +01] {subprocess.py:93} INFO - 25/11/19 14:58:23 INFO SparkEnv: Registering BlockManagerMaster
+[2025-11-19, 15:58:23 +01] {subprocess.py:93} INFO - 25/11/19 14:58:23 INFO BlockManagerMasterEndpoint: Using org.apache.spark.storage.DefaultTopologyMapper for getting topology information
+[2025-11-19, 15:58:23 +01] {subprocess.py:93} INFO - 25/11/19 14:58:23 INFO BlockManagerMasterEndpoint: BlockManagerMasterEndpoint up
+[2025-11-19, 15:58:23 +01] {subprocess.py:93} INFO - 25/11/19 14:58:23 INFO SparkEnv: Registering BlockManagerMasterHeartbeat
+[2025-11-19, 15:58:23 +01] {subprocess.py:93} INFO - 25/11/19 14:58:23 INFO DiskBlockManager: Created local directory at /tmp/blockmgr-350138fa-90ab-493b-83da-70661525da11
+[2025-11-19, 15:58:23 +01] {subprocess.py:93} INFO - 25/11/19 14:58:23 INFO MemoryStore: MemoryStore started with capacity 434.4 MiB
+[2025-11-19, 15:58:23 +01] {subprocess.py:93} INFO - 25/11/19 14:58:23 INFO SparkEnv: Registering OutputCommitCoordinator
+[2025-11-19, 15:58:24 +01] {subprocess.py:93} INFO - 25/11/19 14:58:24 INFO JettyUtils: Start Jetty 0.0.0.0:4040 for SparkUI
+[2025-11-19, 15:58:24 +01] {subprocess.py:93} INFO - 25/11/19 14:58:24 WARN Utils: Service 'SparkUI' could not bind on port 4040. Attempting port 4041.
+[2025-11-19, 15:58:24 +01] {subprocess.py:93} INFO - 25/11/19 14:58:24 WARN Utils: Service 'SparkUI' could not bind on port 4041. Attempting port 4042.
+[2025-11-19, 15:58:24 +01] {subprocess.py:93} INFO - 25/11/19 14:58:24 INFO Utils: Successfully started service 'SparkUI' on port 4042.
+[2025-11-19, 15:58:24 +01] {subprocess.py:93} INFO - 25/11/19 14:58:24 INFO Executor: Starting executor ID driver on host 78ee41eacf6b
+[2025-11-19, 15:58:24 +01] {subprocess.py:93} INFO - 25/11/19 14:58:24 INFO Executor: OS info Linux, 6.6.87.2-microsoft-standard-WSL2, amd64
+[2025-11-19, 15:58:24 +01] {subprocess.py:93} INFO - 25/11/19 14:58:24 INFO Executor: Java version 11.0.22
+[2025-11-19, 15:58:24 +01] {subprocess.py:93} INFO - 25/11/19 14:58:24 INFO Executor: Starting executor with user classpath (userClassPathFirst = false): ''
+[2025-11-19, 15:58:24 +01] {subprocess.py:93} INFO - 25/11/19 14:58:24 INFO Executor: Created or updated repl class loader org.apache.spark.util.MutableURLClassLoader@49e38870 for default.
+[2025-11-19, 15:58:24 +01] {subprocess.py:93} INFO - 25/11/19 14:58:24 INFO Utils: Successfully started service 'org.apache.spark.network.netty.NettyBlockTransferService' on port 34257.
+[2025-11-19, 15:58:24 +01] {subprocess.py:93} INFO - 25/11/19 14:58:24 INFO NettyBlockTransferService: Server created on 78ee41eacf6b:34257
+[2025-11-19, 15:58:24 +01] {subprocess.py:93} INFO - 25/11/19 14:58:24 INFO BlockManager: Using org.apache.spark.storage.RandomBlockReplicationPolicy for block replication policy
+[2025-11-19, 15:58:24 +01] {subprocess.py:93} INFO - 25/11/19 14:58:24 INFO BlockManagerMaster: Registering BlockManager BlockManagerId(driver, 78ee41eacf6b, 34257, None)
+[2025-11-19, 15:58:24 +01] {subprocess.py:93} INFO - 25/11/19 14:58:24 INFO BlockManagerMasterEndpoint: Registering block manager 78ee41eacf6b:34257 with 434.4 MiB RAM, BlockManagerId(driver, 78ee41eacf6b, 34257, None)
+[2025-11-19, 15:58:24 +01] {subprocess.py:93} INFO - 25/11/19 14:58:24 INFO BlockManagerMaster: Registered BlockManager BlockManagerId(driver, 78ee41eacf6b, 34257, None)
+[2025-11-19, 15:58:24 +01] {subprocess.py:93} INFO - 25/11/19 14:58:24 INFO BlockManager: Initialized BlockManager: BlockManagerId(driver, 78ee41eacf6b, 34257, None)
+[2025-11-19, 15:58:25 +01] {subprocess.py:93} INFO - 25/11/19 14:58:25 INFO SharedState: Setting hive.metastore.warehouse.dir ('null') to the value of spark.sql.warehouse.dir.
+[2025-11-19, 15:58:25 +01] {subprocess.py:93} INFO - 25/11/19 14:58:25 INFO SharedState: Warehouse path is 'file:/opt/work/spark-warehouse'.
+[2025-11-19, 15:58:27 +01] {subprocess.py:93} INFO - 25/11/19 14:58:27 INFO CatalogUtil: Loading custom FileIO implementation: org.apache.iceberg.aws.s3.S3FileIO
+[2025-11-19, 15:58:30 +01] {subprocess.py:93} INFO - 25/11/19 14:58:30 INFO V2ScanRelationPushDown:
+[2025-11-19, 15:58:30 +01] {subprocess.py:93} INFO - Output: payload#1, ingest_ts#2
+[2025-11-19, 15:58:30 +01] {subprocess.py:93} INFO - 
+[2025-11-19, 15:58:30 +01] {subprocess.py:93} INFO - 25/11/19 14:58:30 INFO SnapshotScan: Scanning table rest.raw.mubawab snapshot 150403972506215961 created at 2025-11-19T14:53:21.854+00:00 with filter true
+[2025-11-19, 15:58:32 +01] {subprocess.py:93} INFO - 25/11/19 14:58:32 INFO BaseDistributedDataScan: Planning file tasks locally for table rest.raw.mubawab
+[2025-11-19, 15:58:32 +01] {subprocess.py:93} INFO - 25/11/19 14:58:32 INFO LoggingMetricsReporter: Received metrics report: ScanReport{tableName=rest.raw.mubawab, snapshotId=150403972506215961, filter=true, schemaId=0, projectedFieldIds=[2, 3], projectedFieldNames=[payload, ingest_ts], scanMetrics=ScanMetricsResult{totalPlanningDuration=TimerResult{timeUnit=NANOSECONDS, totalDuration=PT2.037799462S, count=1}, resultDataFiles=CounterResult{unit=COUNT, value=9}, resultDeleteFiles=CounterResult{unit=COUNT, value=0}, totalDataManifests=CounterResult{unit=COUNT, value=9}, totalDeleteManifests=CounterResult{unit=COUNT, value=0}, scannedDataManifests=CounterResult{unit=COUNT, value=9}, skippedDataManifests=CounterResult{unit=COUNT, value=0}, totalFileSizeInBytes=CounterResult{unit=BYTES, value=39745}, totalDeleteFileSizeInBytes=CounterResult{unit=BYTES, value=0}, skippedDataFiles=CounterResult{unit=COUNT, value=0}, skippedDeleteFiles=CounterResult{unit=COUNT, value=0}, scannedDeleteManifests=CounterResult{unit=COUNT, value=0}, skippedDeleteManifests=CounterResult{unit=COUNT, value=0}, indexedDeleteFiles=CounterResult{unit=COUNT, value=0}, equalityDeleteFiles=CounterResult{unit=COUNT, value=0}, positionalDeleteFiles=CounterResult{unit=COUNT, value=0}}, metadata={engine-version=3.5.1, iceberg-version=Apache Iceberg 1.6.0 (commit 229d8f6fcd109e6c8943ea7cbb41dab746c6d0ed), app-id=local-1763564304316, engine-name=spark}}
+[2025-11-19, 15:58:32 +01] {subprocess.py:93} INFO - 25/11/19 14:58:32 INFO SparkPartitioningAwareScan: Reporting UnknownPartitioning with 3 partition(s) for table rest.raw.mubawab
+[2025-11-19, 15:58:33 +01] {subprocess.py:93} INFO - 25/11/19 14:58:33 INFO MemoryStore: Block broadcast_0 stored as values in memory (estimated size 32.0 KiB, free 434.4 MiB)
+[2025-11-19, 15:58:33 +01] {subprocess.py:93} INFO - 25/11/19 14:58:33 INFO MemoryStore: Block broadcast_0_piece0 stored as bytes in memory (estimated size 3.4 KiB, free 434.4 MiB)
+[2025-11-19, 15:58:33 +01] {subprocess.py:93} INFO - 25/11/19 14:58:33 INFO BlockManagerInfo: Added broadcast_0_piece0 in memory on 78ee41eacf6b:34257 (size: 3.4 KiB, free: 434.4 MiB)
+[2025-11-19, 15:58:33 +01] {subprocess.py:93} INFO - 25/11/19 14:58:33 INFO SparkContext: Created broadcast 0 from collect at /opt/work/src/pipeline/transform/mubawab_raw_to_silver.py:120
+[2025-11-19, 15:58:33 +01] {subprocess.py:93} INFO - 25/11/19 14:58:33 INFO MemoryStore: Block broadcast_1 stored as values in memory (estimated size 32.0 KiB, free 434.3 MiB)
+[2025-11-19, 15:58:33 +01] {subprocess.py:93} INFO - 25/11/19 14:58:33 INFO MemoryStore: Block broadcast_1_piece0 stored as bytes in memory (estimated size 3.4 KiB, free 434.3 MiB)
+[2025-11-19, 15:58:33 +01] {subprocess.py:93} INFO - 25/11/19 14:58:33 INFO BlockManagerInfo: Added broadcast_1_piece0 in memory on 78ee41eacf6b:34257 (size: 3.4 KiB, free: 434.4 MiB)
+[2025-11-19, 15:58:33 +01] {subprocess.py:93} INFO - 25/11/19 14:58:33 INFO SparkContext: Created broadcast 1 from collect at /opt/work/src/pipeline/transform/mubawab_raw_to_silver.py:120
+[2025-11-19, 15:58:34 +01] {subprocess.py:93} INFO - 25/11/19 14:58:34 INFO CodeGenerator: Code generated in 263.029652 ms
+[2025-11-19, 15:58:34 +01] {subprocess.py:93} INFO - 25/11/19 14:58:34 INFO CodeGenerator: Code generated in 20.130957 ms
+[2025-11-19, 15:58:34 +01] {subprocess.py:93} INFO - 25/11/19 14:58:34 INFO DAGScheduler: Registering RDD 6 (collect at /opt/work/src/pipeline/transform/mubawab_raw_to_silver.py:120) as input to shuffle 0
+[2025-11-19, 15:58:34 +01] {subprocess.py:93} INFO - 25/11/19 14:58:34 INFO DAGScheduler: Got map stage job 0 (collect at /opt/work/src/pipeline/transform/mubawab_raw_to_silver.py:120) with 3 output partitions
+[2025-11-19, 15:58:34 +01] {subprocess.py:93} INFO - 25/11/19 14:58:34 INFO DAGScheduler: Final stage: ShuffleMapStage 0 (collect at /opt/work/src/pipeline/transform/mubawab_raw_to_silver.py:120)
+[2025-11-19, 15:58:34 +01] {subprocess.py:93} INFO - 25/11/19 14:58:34 INFO DAGScheduler: Parents of final stage: List()
+[2025-11-19, 15:58:34 +01] {subprocess.py:93} INFO - 25/11/19 14:58:34 INFO DAGScheduler: Missing parents: List()
+[2025-11-19, 15:58:34 +01] {subprocess.py:93} INFO - 25/11/19 14:58:34 INFO DAGScheduler: Submitting ShuffleMapStage 0 (MapPartitionsRDD[6] at collect at /opt/work/src/pipeline/transform/mubawab_raw_to_silver.py:120), which has no missing parents
+[2025-11-19, 15:58:34 +01] {subprocess.py:93} INFO - 25/11/19 14:58:34 INFO MemoryStore: Block broadcast_2 stored as values in memory (estimated size 38.3 KiB, free 434.3 MiB)
+[2025-11-19, 15:58:34 +01] {subprocess.py:93} INFO - 25/11/19 14:58:34 INFO MemoryStore: Block broadcast_2_piece0 stored as bytes in memory (estimated size 16.5 KiB, free 434.3 MiB)
+[2025-11-19, 15:58:34 +01] {subprocess.py:93} INFO - 25/11/19 14:58:34 INFO BlockManagerInfo: Added broadcast_2_piece0 in memory on 78ee41eacf6b:34257 (size: 16.5 KiB, free: 434.4 MiB)
+[2025-11-19, 15:58:34 +01] {subprocess.py:93} INFO - 25/11/19 14:58:34 INFO SparkContext: Created broadcast 2 from broadcast at DAGScheduler.scala:1585
+[2025-11-19, 15:58:34 +01] {subprocess.py:93} INFO - 25/11/19 14:58:34 INFO DAGScheduler: Submitting 3 missing tasks from ShuffleMapStage 0 (MapPartitionsRDD[6] at collect at /opt/work/src/pipeline/transform/mubawab_raw_to_silver.py:120) (first 15 tasks are for partitions Vector(0, 1, 2))
+[2025-11-19, 15:58:34 +01] {subprocess.py:93} INFO - 25/11/19 14:58:34 INFO TaskSchedulerImpl: Adding task set 0.0 with 3 tasks resource profile 0
+[2025-11-19, 15:58:34 +01] {subprocess.py:93} INFO - 25/11/19 14:58:34 INFO TaskSetManager: Starting task 0.0 in stage 0.0 (TID 0) (78ee41eacf6b, executor driver, partition 0, PROCESS_LOCAL, 14213 bytes)
+[2025-11-19, 15:58:34 +01] {subprocess.py:93} INFO - 25/11/19 14:58:34 INFO TaskSetManager: Starting task 1.0 in stage 0.0 (TID 1) (78ee41eacf6b, executor driver, partition 1, PROCESS_LOCAL, 14222 bytes)
+[2025-11-19, 15:58:34 +01] {subprocess.py:93} INFO - 25/11/19 14:58:34 INFO TaskSetManager: Starting task 2.0 in stage 0.0 (TID 2) (78ee41eacf6b, executor driver, partition 2, PROCESS_LOCAL, 12479 bytes)
+[2025-11-19, 15:58:34 +01] {subprocess.py:93} INFO - 25/11/19 14:58:34 INFO Executor: Running task 2.0 in stage 0.0 (TID 2)
+[2025-11-19, 15:58:34 +01] {subprocess.py:93} INFO - 25/11/19 14:58:34 INFO Executor: Running task 0.0 in stage 0.0 (TID 0)
+[2025-11-19, 15:58:34 +01] {subprocess.py:93} INFO - 25/11/19 14:58:34 INFO Executor: Running task 1.0 in stage 0.0 (TID 1)
+[2025-11-19, 15:58:34 +01] {subprocess.py:93} INFO - 25/11/19 14:58:34 INFO CodeGenerator: Code generated in 25.897563 ms
+[2025-11-19, 15:58:34 +01] {subprocess.py:93} INFO - 25/11/19 14:58:34 INFO CodeGenerator: Code generated in 35.730072 ms
+[2025-11-19, 15:58:34 +01] {subprocess.py:93} INFO - 25/11/19 14:58:34 INFO CodeGenerator: Code generated in 20.933495 ms
+[2025-11-19, 15:58:34 +01] {subprocess.py:93} INFO - 25/11/19 14:58:34 INFO CodeGenerator: Code generated in 35.655751 ms
+[2025-11-19, 15:58:35 +01] {subprocess.py:93} INFO - 25/11/19 14:58:35 INFO CodeGenerator: Code generated in 17.30412 ms
+[2025-11-19, 15:58:35 +01] {subprocess.py:93} INFO - 25/11/19 14:58:35 INFO CodeGenerator: Code generated in 12.467418 ms
+[2025-11-19, 15:58:35 +01] {subprocess.py:93} INFO - 25/11/19 14:58:35 INFO VectorizedSparkParquetReaders: Enabling arrow.enable_unsafe_memory_access
+[2025-11-19, 15:58:35 +01] {subprocess.py:93} INFO - 25/11/19 14:58:35 INFO VectorizedSparkParquetReaders: Disabling arrow.enable_null_check_for_get
+[2025-11-19, 15:58:35 +01] {subprocess.py:93} INFO - 25/11/19 14:58:35 INFO BaseAllocator: Debug mode disabled. Enable with the VM option -Darrow.memory.debug.allocator=true.
+[2025-11-19, 15:58:35 +01] {subprocess.py:93} INFO - 25/11/19 14:58:35 INFO DefaultAllocationManagerOption: allocation manager type not specified, using netty as the default type
+[2025-11-19, 15:58:35 +01] {subprocess.py:93} INFO - 25/11/19 14:58:35 INFO CheckAllocator: Using DefaultAllocationManager at memory/DefaultAllocationManagerFactory.class
+[2025-11-19, 15:58:35 +01] {subprocess.py:93} INFO - 25/11/19 14:58:35 INFO CodecPool: Got brand-new decompressor [.zstd]
+[2025-11-19, 15:58:35 +01] {subprocess.py:93} INFO - 25/11/19 14:58:35 INFO CodecPool: Got brand-new decompressor [.zstd]
+[2025-11-19, 15:58:36 +01] {subprocess.py:93} INFO - 25/11/19 14:58:36 INFO CodecPool: Got brand-new decompressor [.zstd]
+[2025-11-19, 15:58:36 +01] {subprocess.py:93} INFO - 25/11/19 14:58:36 INFO CodecPool: Got brand-new decompressor [.zstd]
+[2025-11-19, 15:58:36 +01] {subprocess.py:93} INFO - 25/11/19 14:58:36 INFO CodecPool: Got brand-new decompressor [.zstd]
+[2025-11-19, 15:58:36 +01] {subprocess.py:93} INFO - 25/11/19 14:58:36 INFO CodeGenerator: Code generated in 59.821591 ms
+[2025-11-19, 15:58:36 +01] {subprocess.py:93} INFO - 25/11/19 14:58:36 INFO CodecPool: Got brand-new decompressor [.zstd]
+[2025-11-19, 15:58:36 +01] {subprocess.py:93} INFO - 25/11/19 14:58:36 INFO CodecPool: Got brand-new decompressor [.zstd]
+[2025-11-19, 15:58:36 +01] {subprocess.py:93} INFO - 25/11/19 14:58:36 INFO CodecPool: Got brand-new decompressor [.zstd]
+[2025-11-19, 15:58:36 +01] {subprocess.py:93} INFO - 25/11/19 14:58:36 INFO Executor: Finished task 0.0 in stage 0.0 (TID 0). 5349 bytes result sent to driver
+[2025-11-19, 15:58:36 +01] {subprocess.py:93} INFO - 25/11/19 14:58:36 INFO Executor: Finished task 1.0 in stage 0.0 (TID 1). 5349 bytes result sent to driver
+[2025-11-19, 15:58:36 +01] {subprocess.py:93} INFO - 25/11/19 14:58:36 INFO Executor: Finished task 2.0 in stage 0.0 (TID 2). 5349 bytes result sent to driver
+[2025-11-19, 15:58:36 +01] {subprocess.py:93} INFO - 25/11/19 14:58:36 INFO TaskSetManager: Finished task 2.0 in stage 0.0 (TID 2) in 2094 ms on 78ee41eacf6b (executor driver) (1/3)
+[2025-11-19, 15:58:36 +01] {subprocess.py:93} INFO - 25/11/19 14:58:36 INFO TaskSetManager: Finished task 1.0 in stage 0.0 (TID 1) in 2105 ms on 78ee41eacf6b (executor driver) (2/3)
+[2025-11-19, 15:58:36 +01] {subprocess.py:93} INFO - 25/11/19 14:58:36 INFO TaskSetManager: Finished task 0.0 in stage 0.0 (TID 0) in 2155 ms on 78ee41eacf6b (executor driver) (3/3)
+[2025-11-19, 15:58:36 +01] {subprocess.py:93} INFO - 25/11/19 14:58:36 INFO TaskSchedulerImpl: Removed TaskSet 0.0, whose tasks have all completed, from pool
+[2025-11-19, 15:58:36 +01] {subprocess.py:93} INFO - 25/11/19 14:58:36 INFO DAGScheduler: ShuffleMapStage 0 (collect at /opt/work/src/pipeline/transform/mubawab_raw_to_silver.py:120) finished in 2.321 s
+[2025-11-19, 15:58:36 +01] {subprocess.py:93} INFO - 25/11/19 14:58:36 INFO DAGScheduler: looking for newly runnable stages
+[2025-11-19, 15:58:36 +01] {subprocess.py:93} INFO - 25/11/19 14:58:36 INFO DAGScheduler: running: Set()
+[2025-11-19, 15:58:36 +01] {subprocess.py:93} INFO - 25/11/19 14:58:36 INFO DAGScheduler: waiting: Set()
+[2025-11-19, 15:58:36 +01] {subprocess.py:93} INFO - 25/11/19 14:58:36 INFO DAGScheduler: failed: Set()
+[2025-11-19, 15:58:36 +01] {subprocess.py:93} INFO - 25/11/19 14:58:36 INFO ShufflePartitionsUtil: For shuffle(0), advisory target size: 67108864, actual target size 1048576, minimum partition size: 1048576
+[2025-11-19, 15:58:36 +01] {subprocess.py:93} INFO - 25/11/19 14:58:36 INFO CodeGenerator: Code generated in 61.152633 ms
+[2025-11-19, 15:58:36 +01] {subprocess.py:93} INFO - 25/11/19 14:58:36 INFO CodeGenerator: Code generated in 15.961805 ms
+[2025-11-19, 15:58:37 +01] {subprocess.py:93} INFO - 25/11/19 14:58:37 INFO CodeGenerator: Code generated in 11.184894 ms
+[2025-11-19, 15:58:37 +01] {subprocess.py:93} INFO - 25/11/19 14:58:37 INFO DAGScheduler: Registering RDD 14 (collect at /opt/work/src/pipeline/transform/mubawab_raw_to_silver.py:120) as input to shuffle 1
+[2025-11-19, 15:58:37 +01] {subprocess.py:93} INFO - 25/11/19 14:58:37 INFO DAGScheduler: Got map stage job 1 (collect at /opt/work/src/pipeline/transform/mubawab_raw_to_silver.py:120) with 1 output partitions
+[2025-11-19, 15:58:37 +01] {subprocess.py:93} INFO - 25/11/19 14:58:37 INFO DAGScheduler: Final stage: ShuffleMapStage 2 (collect at /opt/work/src/pipeline/transform/mubawab_raw_to_silver.py:120)
+[2025-11-19, 15:58:37 +01] {subprocess.py:93} INFO - 25/11/19 14:58:37 INFO DAGScheduler: Parents of final stage: List(ShuffleMapStage 1)
+[2025-11-19, 15:58:37 +01] {subprocess.py:93} INFO - 25/11/19 14:58:37 INFO DAGScheduler: Missing parents: List()
+[2025-11-19, 15:58:37 +01] {subprocess.py:93} INFO - 25/11/19 14:58:37 INFO DAGScheduler: Submitting ShuffleMapStage 2 (MapPartitionsRDD[14] at collect at /opt/work/src/pipeline/transform/mubawab_raw_to_silver.py:120), which has no missing parents
+[2025-11-19, 15:58:37 +01] {subprocess.py:93} INFO - 25/11/19 14:58:37 INFO MemoryStore: Block broadcast_3 stored as values in memory (estimated size 61.2 KiB, free 434.2 MiB)
+[2025-11-19, 15:58:37 +01] {subprocess.py:93} INFO - 25/11/19 14:58:37 INFO MemoryStore: Block broadcast_3_piece0 stored as bytes in memory (estimated size 25.9 KiB, free 434.2 MiB)
+[2025-11-19, 15:58:37 +01] {subprocess.py:93} INFO - 25/11/19 14:58:37 INFO BlockManagerInfo: Added broadcast_3_piece0 in memory on 78ee41eacf6b:34257 (size: 25.9 KiB, free: 434.4 MiB)
+[2025-11-19, 15:58:37 +01] {subprocess.py:93} INFO - 25/11/19 14:58:37 INFO SparkContext: Created broadcast 3 from broadcast at DAGScheduler.scala:1585
+[2025-11-19, 15:58:37 +01] {subprocess.py:93} INFO - 25/11/19 14:58:37 INFO DAGScheduler: Submitting 1 missing tasks from ShuffleMapStage 2 (MapPartitionsRDD[14] at collect at /opt/work/src/pipeline/transform/mubawab_raw_to_silver.py:120) (first 15 tasks are for partitions Vector(0))
+[2025-11-19, 15:58:37 +01] {subprocess.py:93} INFO - 25/11/19 14:58:37 INFO TaskSchedulerImpl: Adding task set 2.0 with 1 tasks resource profile 0
+[2025-11-19, 15:58:37 +01] {subprocess.py:93} INFO - 25/11/19 14:58:37 INFO TaskSetManager: Starting task 0.0 in stage 2.0 (TID 3) (78ee41eacf6b, executor driver, partition 0, NODE_LOCAL, 7604 bytes)
+[2025-11-19, 15:58:37 +01] {subprocess.py:93} INFO - 25/11/19 14:58:37 INFO Executor: Running task 0.0 in stage 2.0 (TID 3)
+[2025-11-19, 15:58:37 +01] {subprocess.py:93} INFO - 25/11/19 14:58:37 INFO BlockManagerInfo: Removed broadcast_2_piece0 on 78ee41eacf6b:34257 in memory (size: 16.5 KiB, free: 434.4 MiB)
+[2025-11-19, 15:58:37 +01] {subprocess.py:93} INFO - 25/11/19 14:58:37 INFO ShuffleBlockFetcherIterator: Getting 3 (8.4 KiB) non-empty blocks including 3 (8.4 KiB) local and 0 (0.0 B) host-local and 0 (0.0 B) push-merged-local and 0 (0.0 B) remote blocks
+[2025-11-19, 15:58:37 +01] {subprocess.py:93} INFO - 25/11/19 14:58:37 INFO ShuffleBlockFetcherIterator: Started 0 remote fetches in 27 ms
+[2025-11-19, 15:58:37 +01] {subprocess.py:93} INFO - 25/11/19 14:58:37 INFO CodeGenerator: Code generated in 25.08529 ms
+[2025-11-19, 15:58:37 +01] {subprocess.py:93} INFO - 25/11/19 14:58:37 INFO CodeGenerator: Code generated in 20.328308 ms
+[2025-11-19, 15:58:37 +01] {subprocess.py:93} INFO - 25/11/19 14:58:37 INFO CodeGenerator: Code generated in 13.176483 ms
+[2025-11-19, 15:58:37 +01] {subprocess.py:93} INFO - 25/11/19 14:58:37 INFO CodeGenerator: Code generated in 10.793941 ms
+[2025-11-19, 15:58:37 +01] {subprocess.py:93} INFO - 25/11/19 14:58:37 INFO CodeGenerator: Code generated in 16.477379 ms
+[2025-11-19, 15:58:37 +01] {subprocess.py:93} INFO - 25/11/19 14:58:37 INFO CodeGenerator: Code generated in 30.390405 ms
+[2025-11-19, 15:58:37 +01] {subprocess.py:93} INFO - 25/11/19 14:58:37 INFO CodeGenerator: Code generated in 17.530842 ms
+[2025-11-19, 15:58:37 +01] {subprocess.py:93} INFO - 25/11/19 14:58:37 INFO CodeGenerator: Code generated in 54.044111 ms
+[2025-11-19, 15:58:37 +01] {subprocess.py:93} INFO - 25/11/19 14:58:37 INFO CodeGenerator: Code generated in 20.298106 ms
+[2025-11-19, 15:58:37 +01] {subprocess.py:93} INFO - 25/11/19 14:58:37 INFO CodeGenerator: Code generated in 8.135883 ms
+[2025-11-19, 15:58:37 +01] {subprocess.py:93} INFO - 25/11/19 14:58:37 INFO CodeGenerator: Code generated in 14.955389 ms
+[2025-11-19, 15:58:37 +01] {subprocess.py:93} INFO - 25/11/19 14:58:37 INFO Executor: Finished task 0.0 in stage 2.0 (TID 3). 8643 bytes result sent to driver
+[2025-11-19, 15:58:37 +01] {subprocess.py:93} INFO - 25/11/19 14:58:37 INFO TaskSetManager: Finished task 0.0 in stage 2.0 (TID 3) in 763 ms on 78ee41eacf6b (executor driver) (1/1)
+[2025-11-19, 15:58:37 +01] {subprocess.py:93} INFO - 25/11/19 14:58:37 INFO TaskSchedulerImpl: Removed TaskSet 2.0, whose tasks have all completed, from pool
+[2025-11-19, 15:58:37 +01] {subprocess.py:93} INFO - 25/11/19 14:58:37 INFO DAGScheduler: ShuffleMapStage 2 (collect at /opt/work/src/pipeline/transform/mubawab_raw_to_silver.py:120) finished in 0.801 s
+[2025-11-19, 15:58:37 +01] {subprocess.py:93} INFO - 25/11/19 14:58:37 INFO DAGScheduler: looking for newly runnable stages
+[2025-11-19, 15:58:37 +01] {subprocess.py:93} INFO - 25/11/19 14:58:37 INFO DAGScheduler: running: Set()
+[2025-11-19, 15:58:37 +01] {subprocess.py:93} INFO - 25/11/19 14:58:37 INFO DAGScheduler: waiting: Set()
+[2025-11-19, 15:58:37 +01] {subprocess.py:93} INFO - 25/11/19 14:58:37 INFO DAGScheduler: failed: Set()
+[2025-11-19, 15:58:37 +01] {subprocess.py:93} INFO - 25/11/19 14:58:37 INFO ShufflePartitionsUtil: For shuffle(1), advisory target size: 67108864, actual target size 1048576, minimum partition size: 1048576
+[2025-11-19, 15:58:38 +01] {subprocess.py:93} INFO - 25/11/19 14:58:38 INFO CodeGenerator: Code generated in 37.380147 ms
+[2025-11-19, 15:58:38 +01] {subprocess.py:93} INFO - 25/11/19 14:58:38 INFO SparkContext: Starting job: collect at /opt/work/src/pipeline/transform/mubawab_raw_to_silver.py:120
+[2025-11-19, 15:58:38 +01] {subprocess.py:93} INFO - 25/11/19 14:58:38 INFO DAGScheduler: Got job 2 (collect at /opt/work/src/pipeline/transform/mubawab_raw_to_silver.py:120) with 1 output partitions
+[2025-11-19, 15:58:38 +01] {subprocess.py:93} INFO - 25/11/19 14:58:38 INFO DAGScheduler: Final stage: ResultStage 5 (collect at /opt/work/src/pipeline/transform/mubawab_raw_to_silver.py:120)
+[2025-11-19, 15:58:38 +01] {subprocess.py:93} INFO - 25/11/19 14:58:38 INFO DAGScheduler: Parents of final stage: List(ShuffleMapStage 4)
+[2025-11-19, 15:58:38 +01] {subprocess.py:93} INFO - 25/11/19 14:58:38 INFO DAGScheduler: Missing parents: List()
+[2025-11-19, 15:58:38 +01] {subprocess.py:93} INFO - 25/11/19 14:58:38 INFO DAGScheduler: Submitting ResultStage 5 (MapPartitionsRDD[17] at collect at /opt/work/src/pipeline/transform/mubawab_raw_to_silver.py:120), which has no missing parents
+[2025-11-19, 15:58:38 +01] {subprocess.py:93} INFO - 25/11/19 14:58:38 INFO MemoryStore: Block broadcast_4 stored as values in memory (estimated size 57.4 KiB, free 434.2 MiB)
+[2025-11-19, 15:58:38 +01] {subprocess.py:93} INFO - 25/11/19 14:58:38 INFO MemoryStore: Block broadcast_4_piece0 stored as bytes in memory (estimated size 24.8 KiB, free 434.2 MiB)
+[2025-11-19, 15:58:38 +01] {subprocess.py:93} INFO - 25/11/19 14:58:38 INFO BlockManagerInfo: Added broadcast_4_piece0 in memory on 78ee41eacf6b:34257 (size: 24.8 KiB, free: 434.3 MiB)
+[2025-11-19, 15:58:38 +01] {subprocess.py:93} INFO - 25/11/19 14:58:38 INFO SparkContext: Created broadcast 4 from broadcast at DAGScheduler.scala:1585
+[2025-11-19, 15:58:38 +01] {subprocess.py:93} INFO - 25/11/19 14:58:38 INFO DAGScheduler: Submitting 1 missing tasks from ResultStage 5 (MapPartitionsRDD[17] at collect at /opt/work/src/pipeline/transform/mubawab_raw_to_silver.py:120) (first 15 tasks are for partitions Vector(0))
+[2025-11-19, 15:58:38 +01] {subprocess.py:93} INFO - 25/11/19 14:58:38 INFO TaskSchedulerImpl: Adding task set 5.0 with 1 tasks resource profile 0
+[2025-11-19, 15:58:38 +01] {subprocess.py:93} INFO - 25/11/19 14:58:38 INFO BlockManagerInfo: Removed broadcast_3_piece0 on 78ee41eacf6b:34257 in memory (size: 25.9 KiB, free: 434.4 MiB)
+[2025-11-19, 15:58:38 +01] {subprocess.py:93} INFO - 25/11/19 14:58:38 INFO TaskSetManager: Starting task 0.0 in stage 5.0 (TID 4) (78ee41eacf6b, executor driver, partition 0, NODE_LOCAL, 7615 bytes)
+[2025-11-19, 15:58:38 +01] {subprocess.py:93} INFO - 25/11/19 14:58:38 INFO Executor: Running task 0.0 in stage 5.0 (TID 4)
+[2025-11-19, 15:58:38 +01] {subprocess.py:93} INFO - 25/11/19 14:58:38 INFO ShuffleBlockFetcherIterator: Getting 1 (464.0 B) non-empty blocks including 1 (464.0 B) local and 0 (0.0 B) host-local and 0 (0.0 B) push-merged-local and 0 (0.0 B) remote blocks
+[2025-11-19, 15:58:38 +01] {subprocess.py:93} INFO - 25/11/19 14:58:38 INFO ShuffleBlockFetcherIterator: Started 0 remote fetches in 12 ms
+[2025-11-19, 15:58:38 +01] {subprocess.py:93} INFO - 25/11/19 14:58:38 INFO CodeGenerator: Code generated in 95.88472 ms
+[2025-11-19, 15:58:38 +01] {subprocess.py:93} INFO - 25/11/19 14:58:38 INFO Executor: Finished task 0.0 in stage 5.0 (TID 4). 10062 bytes result sent to driver
+[2025-11-19, 15:58:38 +01] {subprocess.py:93} INFO - 25/11/19 14:58:38 INFO TaskSetManager: Finished task 0.0 in stage 5.0 (TID 4) in 378 ms on 78ee41eacf6b (executor driver) (1/1)
+[2025-11-19, 15:58:38 +01] {subprocess.py:93} INFO - 25/11/19 14:58:38 INFO TaskSchedulerImpl: Removed TaskSet 5.0, whose tasks have all completed, from pool
+[2025-11-19, 15:58:38 +01] {subprocess.py:93} INFO - 25/11/19 14:58:38 INFO DAGScheduler: ResultStage 5 (collect at /opt/work/src/pipeline/transform/mubawab_raw_to_silver.py:120) finished in 0.443 s
+[2025-11-19, 15:58:38 +01] {subprocess.py:93} INFO - 25/11/19 14:58:38 INFO DAGScheduler: Job 2 is finished. Cancelling potential speculative or zombie tasks for this job
+[2025-11-19, 15:58:38 +01] {subprocess.py:93} INFO - 25/11/19 14:58:38 INFO TaskSchedulerImpl: Killing all running tasks in stage 5: Stage finished
+[2025-11-19, 15:58:38 +01] {subprocess.py:93} INFO - 25/11/19 14:58:38 INFO DAGScheduler: Job 2 finished: collect at /opt/work/src/pipeline/transform/mubawab_raw_to_silver.py:120, took 0.489702 s
+[2025-11-19, 15:58:39 +01] {subprocess.py:93} INFO - Traceback (most recent call last):
+[2025-11-19, 15:58:39 +01] {subprocess.py:93} INFO -   File "/opt/work/src/pipeline/transform/mubawab_raw_to_silver.py", line 172, in <module>
+[2025-11-19, 15:58:39 +01] {subprocess.py:93} INFO -     main()
+[2025-11-19, 15:58:39 +01] {subprocess.py:93} INFO -   File "/opt/work/src/pipeline/transform/mubawab_raw_to_silver.py", line 165, in main
+[2025-11-19, 15:58:39 +01] {subprocess.py:93} INFO -     final = final.where(col("ingest_ts") >= expr(f"timestampadd(MINUTE, -{args.fallback_window_mins}, current_timestamp())"))
+[2025-11-19, 15:58:39 +01] {subprocess.py:93} INFO - NameError: name 'expr' is not defined
+[2025-11-19, 15:58:39 +01] {subprocess.py:93} INFO - 25/11/19 14:58:39 INFO SparkContext: Invoking stop() from shutdown hook
+[2025-11-19, 15:58:39 +01] {subprocess.py:93} INFO - 25/11/19 14:58:39 INFO SparkContext: SparkContext is stopping with exitCode 0.
+[2025-11-19, 15:58:39 +01] {subprocess.py:93} INFO - 25/11/19 14:58:39 INFO BlockManagerInfo: Removed broadcast_4_piece0 on 78ee41eacf6b:34257 in memory (size: 24.8 KiB, free: 434.4 MiB)
+[2025-11-19, 15:58:39 +01] {subprocess.py:93} INFO - 25/11/19 14:58:39 INFO SparkUI: Stopped Spark web UI at http://78ee41eacf6b:4042
+[2025-11-19, 15:58:39 +01] {subprocess.py:93} INFO - 25/11/19 14:58:39 INFO MapOutputTrackerMasterEndpoint: MapOutputTrackerMasterEndpoint stopped!
+[2025-11-19, 15:58:39 +01] {subprocess.py:93} INFO - 25/11/19 14:58:39 INFO MemoryStore: MemoryStore cleared
+[2025-11-19, 15:58:39 +01] {subprocess.py:93} INFO - 25/11/19 14:58:39 INFO BlockManager: BlockManager stopped
+[2025-11-19, 15:58:39 +01] {subprocess.py:93} INFO - 25/11/19 14:58:39 INFO BlockManagerMaster: BlockManagerMaster stopped
+[2025-11-19, 15:58:39 +01] {subprocess.py:93} INFO - 25/11/19 14:58:39 INFO OutputCommitCoordinator$OutputCommitCoordinatorEndpoint: OutputCommitCoordinator stopped!
+[2025-11-19, 15:58:39 +01] {subprocess.py:93} INFO - 25/11/19 14:58:39 INFO SparkContext: Successfully stopped SparkContext
+[2025-11-19, 15:58:39 +01] {subprocess.py:93} INFO - 25/11/19 14:58:39 INFO ShutdownHookManager: Shutdown hook called
+[2025-11-19, 15:58:39 +01] {subprocess.py:93} INFO - 25/11/19 14:58:39 INFO ShutdownHookManager: Deleting directory /tmp/spark-095664c5-174c-456f-b907-35236ade5e58/pyspark-38367e4d-094c-4a8b-b282-6cf268477936
+[2025-11-19, 15:58:39 +01] {subprocess.py:93} INFO - 25/11/19 14:58:39 INFO ShutdownHookManager: Deleting directory /tmp/spark-0141c8a8-389b-478a-8017-82a57acc5488
+[2025-11-19, 15:58:39 +01] {subprocess.py:93} INFO - 25/11/19 14:58:39 INFO ShutdownHookManager: Deleting directory /tmp/spark-095664c5-174c-456f-b907-35236ade5e58
+[2025-11-19, 15:58:40 +01] {subprocess.py:97} INFO - Command exited with return code 1
+[2025-11-19, 15:58:40 +01] {taskinstance.py:441} ▼ Post task execution logs
+[2025-11-19, 15:58:40 +01] {taskinstance.py:2905} ERROR - Task failed with exception
+Traceback (most recent call last):
+  File "/home/airflow/.local/lib/python3.12/site-packages/airflow/models/taskinstance.py", line 465, in _execute_task
+    result = _execute_callable(context=context, **execute_callable_kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/airflow/.local/lib/python3.12/site-packages/airflow/models/taskinstance.py", line 432, in _execute_callable
+    return execute_callable(context=context, **execute_callable_kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/airflow/.local/lib/python3.12/site-packages/airflow/models/baseoperator.py", line 401, in wrapper
+    return func(self, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/airflow/.local/lib/python3.12/site-packages/airflow/operators/bash.py", line 243, in execute
+    raise AirflowException(
+airflow.exceptions.AirflowException: Bash command failed. The command returned a non-zero exit code 1.
+[2025-11-19, 15:58:40 +01] {taskinstance.py:1206} INFO - Marking task as FAILED. dag_id=mubawab_scraper, task_id=transform_to_silver, run_id=manual__2025-11-19T14:52:22.956298+00:00, execution_date=20251119T145222, start_date=20251119T145817, end_date=20251119T145840
+[2025-11-19, 15:58:40 +01] {standard_task_runner.py:110} ERROR - Failed to execute job 56 for task transform_to_silver (Bash command failed. The command returned a non-zero exit code 1.; 1743)
+[2025-11-19, 15:58:40 +01] {local_task_job_runner.py:243} INFO - Task exited with return code 1
+[2025-11-19, 15:58:40 +01] {taskinstance.py:3503} INFO - 0 downstream tasks scheduled from follow-on schedule check
+[2025-11-19, 15:58:40 +01] {local_task_job_runner.py:222} ▲▲▲ Log group end c'est quoi le problm exactly ?
