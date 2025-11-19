@@ -1,8 +1,3 @@
-#!/usr/bin/env python3
-# Run:
-#   python -m pipeline.producer.avito_producer --mode louer --pages 1 \
-#     --bootstrap kafka:9092 --topic realestate.avito.raw --limit 5
-
 import argparse
 from pipeline.extract.avito_scraper import run_job
 

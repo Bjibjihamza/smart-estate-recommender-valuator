@@ -7,18 +7,54 @@ from pyspark.sql.functions import (
 )
 from pyspark.sql.types import *
 
+
 UNIFIED_COLS = [
-    "id","url","error","ingest_ts","site","offre","price","title","seller",
-    "published_date","city","neighborhood","property_type","images","equipments",
-    "description_text","offre_match","surface_habitable","caution","zoning",
-    "type_d_appartement","standing","surface_totale","etage","age_du_bien",
-    "nombre_de_pieces","chambres","salle_de_bain","frais_de_syndic_mois",
-    "condition","nombre_d_etage","disponibilite","salons",
+    "id","url","error","ingest_ts","site",
+    "offre","price","title","seller","published_date",
+    "city","neighborhood","property_type",
+    "images","equipments","description_text",
+
+    # AVITO-specific
+    "offre_match",
+    "surface_habitable",
+    "caution",
+    "zoning",
+    "type_d_appartement",
+    "standing",
+    "surface_totale",
+    "etage",
+    "age_du_bien",
+    "nombre_de_pieces",
+    "chambres",
+    "salle_de_bain",
+    "frais_de_syndic_mois",
+    "condition",
+    "nombre_d_etage",
+    "disponibilite",
+    "salons",
+
+    # MUBAWAB-specific (NULL for Avito)
     "features_amenities_json",
-    "type_de_terrain","type_de_bien","statut_du_terrain",
-    "surface_de_la_parcelle","type_du_sol","etage_du_bien","annees",
-    "constructibilite","livraison","orientation","etat","nombre_d_etages"
+    "type_de_terrain",
+    "type_de_bien",
+    "surface",
+    "statut_du_terrain",
+    "surface_de_la_parcelle",
+    "type_du_sol",
+    "etage_du_bien",
+    "detail_1",
+    "annees",
+    "constructibilite",
+    "salles_de_bain",
+    "livraison",
+    "pieces",
+    "orientation",
+    "etat",
+    "nombre_d_etages",
 ]
+
+
+
 
 def build_spark():
     return (
@@ -192,43 +228,47 @@ def main():
         df = df.withColumn(sanitize(k), trim(col("attr_map")[k]))
     df = df.drop("attr_map")  # keep raw 'attributes' to drop later per your rule
 
-    # ---- FINAL projection to unified schema
-    # description -> description_text; drop breadcrumbs/attributes
     final = df.select(
         col("id"), col("url"), col("error"), col("ingest_ts"), col("site"),
         col("offre"), col("price"), col("title"), col("seller"),
         col("published_date"), col("city"), col("neighborhood"),
         col("property_type"), col("images"), col("equipments"),
         col("description").alias("description_text"),
+
+        # AVITO-specific stuff
         col("offre_match"),
-        # extracted attribute fields if present:
-        col(sanitize("Surface habitable")).alias("surface_habitable") if "surface_habitable" in df.columns else lit(None).alias("surface_habitable"),
-        col(sanitize("Caution")).alias("caution") if "caution" in df.columns else lit(None).alias("caution"),
-        col(sanitize("Zoning")).alias("zoning") if "zoning" in df.columns else lit(None).alias("zoning"),
-        col(sanitize("Type d'appartement")).alias("type_d_appartement") if "type_d_appartement" in df.columns else lit(None).alias("type_d_appartement"),
-        col(sanitize("Standing")).alias("standing") if "standing" in df.columns else lit(None).alias("standing"),
-        col(sanitize("Surface totale")).alias("surface_totale") if "surface_totale" in df.columns else lit(None).alias("surface_totale"),
-        col(sanitize("Étage")).alias("etage") if "etage" in df.columns else lit(None).alias("etage"),
-        col(sanitize("Âge du bien")).alias("age_du_bien") if "age_du_bien" in df.columns else lit(None).alias("age_du_bien"),
-        col(sanitize("Nombre de pièces")).alias("nombre_de_pieces") if "nombre_de_pieces" in df.columns else lit(None).alias("nombre_de_pieces"),
-        col(sanitize("Chambres")).alias("chambres") if "chambres" in df.columns else lit(None).alias("chambres"),
-        col(sanitize("Salle de bain")).alias("salle_de_bain") if "salle_de_bain" in df.columns else lit(None).alias("salle_de_bain"),
-        col(sanitize("Frais de syndic / mois")).alias("frais_de_syndic_mois") if "frais_de_syndic_mois" in df.columns else lit(None).alias("frais_de_syndic_mois"),
-        col(sanitize("Condition")).alias("condition") if "condition" in df.columns else lit(None).alias("condition"),
-        col(sanitize("Nombre d'étage")).alias("nombre_d_etage") if "nombre_d_etage" in df.columns else lit(None).alias("nombre_d_etage"),
-        col(sanitize("Disponibilité")).alias("disponibilite") if "disponibilite" in df.columns else lit(None).alias("disponibilite"),
-        col(sanitize("Salons")).alias("salons") if "salons" in df.columns else lit(None).alias("salons"),
-        # Mubawab-only fields → NULLs (extended)
+        col("surface_habitable") if "surface_habitable" in df.columns else lit(None).cast("string").alias("surface_habitable"),
+        col("caution") if "caution" in df.columns else lit(None).cast("string").alias("caution"),
+        col("zoning") if "zoning" in df.columns else lit(None).cast("string").alias("zoning"),
+        col("type_d_appartement") if "type_d_appartement" in df.columns else lit(None).cast("string").alias("type_d_appartement"),
+        col("standing") if "standing" in df.columns else lit(None).cast("string").alias("standing"),
+        col("surface_totale") if "surface_totale" in df.columns else lit(None).cast("string").alias("surface_totale"),
+        col("etage") if "etage" in df.columns else lit(None).cast("string").alias("etage"),
+        col("age_du_bien") if "age_du_bien" in df.columns else lit(None).cast("string").alias("age_du_bien"),
+        col("nombre_de_pieces") if "nombre_de_pieces" in df.columns else lit(None).cast("string").alias("nombre_de_pieces"),
+        col("chambres") if "chambres" in df.columns else lit(None).cast("string").alias("chambres"),
+        col("salle_de_bain") if "salle_de_bain" in df.columns else lit(None).cast("string").alias("salle_de_bain"),
+        col("frais_de_syndic_mois") if "frais_de_syndic_mois" in df.columns else lit(None).cast("string").alias("frais_de_syndic_mois"),
+        col("condition") if "condition" in df.columns else lit(None).cast("string").alias("condition"),
+        col("nombre_d_etage") if "nombre_d_etage" in df.columns else lit(None).cast("string").alias("nombre_d_etage"),
+        col("disponibilite") if "disponibilite" in df.columns else lit(None).cast("string").alias("disponibilite"),
+        col("salons") if "salons" in df.columns else lit(None).cast("string").alias("salons"),
+
+        # MUBAWAB-specific – always NULL for Avito
         lit(None).cast("string").alias("features_amenities_json"),
         lit(None).cast("string").alias("type_de_terrain"),
         lit(None).cast("string").alias("type_de_bien"),
+        lit(None).cast("string").alias("surface"),          # string to match Mubawab
         lit(None).cast("string").alias("statut_du_terrain"),
         lit(None).cast("string").alias("surface_de_la_parcelle"),
         lit(None).cast("string").alias("type_du_sol"),
         lit(None).cast("string").alias("etage_du_bien"),
+        lit(None).cast("string").alias("detail_1"),
         lit(None).cast("string").alias("annees"),
         lit(None).cast("string").alias("constructibilite"),
+        lit(None).cast("string").alias("salles_de_bain"),   # <<< IMPORTANT: exists in table
         lit(None).cast("string").alias("livraison"),
+        lit(None).cast("string").alias("pieces"),           # <<< IMPORTANT: exists in table
         lit(None).cast("string").alias("orientation"),
         lit(None).cast("string").alias("etat"),
         lit(None).cast("string").alias("nombre_d_etages"),

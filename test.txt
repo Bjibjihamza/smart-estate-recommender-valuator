@@ -1,1 +1,1966 @@
-https://www.mubawab.ma/fr/cc/immobilier-a-vendre-all:sc:apartment-sale,commercial-sale,farm-sale,house-sale,land-sale,office-sale,riad-sale,villa-sale
+4a2fe42c2722
+*** Found local files:
+***   * /opt/airflow/logs/dag_id=avito_scraper/run_id=manual__2025-11-19T15:52:23.897029+00:00/task_id=transform_to_silver/attempt=1.log
+[2025-11-19, 16:52:39 +01] {local_task_job_runner.py:120} ▶ Pre task execution logs
+[2025-11-19, 16:52:40 +01] {subprocess.py:63} INFO - Tmp dir root location: /tmp
+[2025-11-19, 16:52:40 +01] {subprocess.py:75} INFO - Running command: ['/usr/bin/bash', '-c', "docker exec -i spark-iceberg bash -lc 'export PYTHONPATH=/opt/work/src && /opt/spark/bin/spark-submit --master local[*] /opt/work/src/pipeline/transform/avito_raw_to_silver.py --catalog rest --mode append --fallback-window-mins 35'"]
+[2025-11-19, 16:52:40 +01] {subprocess.py:86} INFO - Output:
+[2025-11-19, 16:52:43 +01] {subprocess.py:93} INFO - 25/11/19 15:52:43 INFO SparkContext: Running Spark version 3.5.1
+[2025-11-19, 16:52:43 +01] {subprocess.py:93} INFO - 25/11/19 15:52:43 INFO SparkContext: OS info Linux, 6.6.87.2-microsoft-standard-WSL2, amd64
+[2025-11-19, 16:52:43 +01] {subprocess.py:93} INFO - 25/11/19 15:52:43 INFO SparkContext: Java version 11.0.22
+[2025-11-19, 16:52:43 +01] {subprocess.py:93} INFO - 25/11/19 15:52:43 WARN NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+[2025-11-19, 16:52:43 +01] {subprocess.py:93} INFO - 25/11/19 15:52:43 INFO ResourceUtils: ==============================================================
+[2025-11-19, 16:52:43 +01] {subprocess.py:93} INFO - 25/11/19 15:52:43 INFO ResourceUtils: No custom resources configured for spark.driver.
+[2025-11-19, 16:52:43 +01] {subprocess.py:93} INFO - 25/11/19 15:52:43 INFO ResourceUtils: ==============================================================
+[2025-11-19, 16:52:43 +01] {subprocess.py:93} INFO - 25/11/19 15:52:43 INFO SparkContext: Submitted application: avito_raw_to_silver
+[2025-11-19, 16:52:43 +01] {subprocess.py:93} INFO - 25/11/19 15:52:43 INFO ResourceProfile: Default ResourceProfile created, executor resources: Map(cores -> name: cores, amount: 1, script: , vendor: , memory -> name: memory, amount: 1024, script: , vendor: , offHeap -> name: offHeap, amount: 0, script: , vendor: ), task resources: Map(cpus -> name: cpus, amount: 1.0)
+[2025-11-19, 16:52:43 +01] {subprocess.py:93} INFO - 25/11/19 15:52:43 INFO ResourceProfile: Limiting resource is cpu
+[2025-11-19, 16:52:43 +01] {subprocess.py:93} INFO - 25/11/19 15:52:43 INFO ResourceProfileManager: Added ResourceProfile id: 0
+[2025-11-19, 16:52:43 +01] {subprocess.py:93} INFO - 25/11/19 15:52:43 INFO SecurityManager: Changing view acls to: spark
+[2025-11-19, 16:52:43 +01] {subprocess.py:93} INFO - 25/11/19 15:52:43 INFO SecurityManager: Changing modify acls to: spark
+[2025-11-19, 16:52:43 +01] {subprocess.py:93} INFO - 25/11/19 15:52:43 INFO SecurityManager: Changing view acls groups to:
+[2025-11-19, 16:52:43 +01] {subprocess.py:93} INFO - 25/11/19 15:52:43 INFO SecurityManager: Changing modify acls groups to:
+[2025-11-19, 16:52:43 +01] {subprocess.py:93} INFO - 25/11/19 15:52:43 INFO SecurityManager: SecurityManager: authentication disabled; ui acls disabled; users with view permissions: spark; groups with view permissions: EMPTY; users with modify permissions: spark; groups with modify permissions: EMPTY
+[2025-11-19, 16:52:43 +01] {subprocess.py:93} INFO - 25/11/19 15:52:43 INFO Utils: Successfully started service 'sparkDriver' on port 43263.
+[2025-11-19, 16:52:43 +01] {subprocess.py:93} INFO - 25/11/19 15:52:43 INFO SparkEnv: Registering MapOutputTracker
+[2025-11-19, 16:52:43 +01] {subprocess.py:93} INFO - 25/11/19 15:52:43 INFO SparkEnv: Registering BlockManagerMaster
+[2025-11-19, 16:52:43 +01] {subprocess.py:93} INFO - 25/11/19 15:52:43 INFO BlockManagerMasterEndpoint: Using org.apache.spark.storage.DefaultTopologyMapper for getting topology information
+[2025-11-19, 16:52:43 +01] {subprocess.py:93} INFO - 25/11/19 15:52:43 INFO BlockManagerMasterEndpoint: BlockManagerMasterEndpoint up
+[2025-11-19, 16:52:43 +01] {subprocess.py:93} INFO - 25/11/19 15:52:43 INFO SparkEnv: Registering BlockManagerMasterHeartbeat
+[2025-11-19, 16:52:43 +01] {subprocess.py:93} INFO - 25/11/19 15:52:43 INFO DiskBlockManager: Created local directory at /tmp/blockmgr-cea84d43-f1be-48e8-bc84-e57e5f4b2b57
+[2025-11-19, 16:52:43 +01] {subprocess.py:93} INFO - 25/11/19 15:52:43 INFO MemoryStore: MemoryStore started with capacity 434.4 MiB
+[2025-11-19, 16:52:43 +01] {subprocess.py:93} INFO - 25/11/19 15:52:43 INFO SparkEnv: Registering OutputCommitCoordinator
+[2025-11-19, 16:52:44 +01] {subprocess.py:93} INFO - 25/11/19 15:52:44 INFO JettyUtils: Start Jetty 0.0.0.0:4040 for SparkUI
+[2025-11-19, 16:52:44 +01] {subprocess.py:93} INFO - 25/11/19 15:52:44 WARN Utils: Service 'SparkUI' could not bind on port 4040. Attempting port 4041.
+[2025-11-19, 16:52:44 +01] {subprocess.py:93} INFO - 25/11/19 15:52:44 WARN Utils: Service 'SparkUI' could not bind on port 4041. Attempting port 4042.
+[2025-11-19, 16:52:44 +01] {subprocess.py:93} INFO - 25/11/19 15:52:44 INFO Utils: Successfully started service 'SparkUI' on port 4042.
+[2025-11-19, 16:52:44 +01] {subprocess.py:93} INFO - 25/11/19 15:52:44 INFO Executor: Starting executor ID driver on host 45788483b4be
+[2025-11-19, 16:52:44 +01] {subprocess.py:93} INFO - 25/11/19 15:52:44 INFO Executor: OS info Linux, 6.6.87.2-microsoft-standard-WSL2, amd64
+[2025-11-19, 16:52:44 +01] {subprocess.py:93} INFO - 25/11/19 15:52:44 INFO Executor: Java version 11.0.22
+[2025-11-19, 16:52:44 +01] {subprocess.py:93} INFO - 25/11/19 15:52:44 INFO Executor: Starting executor with user classpath (userClassPathFirst = false): ''
+[2025-11-19, 16:52:44 +01] {subprocess.py:93} INFO - 25/11/19 15:52:44 INFO Executor: Created or updated repl class loader org.apache.spark.util.MutableURLClassLoader@6e63e975 for default.
+[2025-11-19, 16:52:44 +01] {subprocess.py:93} INFO - 25/11/19 15:52:44 INFO Utils: Successfully started service 'org.apache.spark.network.netty.NettyBlockTransferService' on port 38513.
+[2025-11-19, 16:52:44 +01] {subprocess.py:93} INFO - 25/11/19 15:52:44 INFO NettyBlockTransferService: Server created on 45788483b4be:38513
+[2025-11-19, 16:52:44 +01] {subprocess.py:93} INFO - 25/11/19 15:52:44 INFO BlockManager: Using org.apache.spark.storage.RandomBlockReplicationPolicy for block replication policy
+[2025-11-19, 16:52:44 +01] {subprocess.py:93} INFO - 25/11/19 15:52:44 INFO BlockManagerMaster: Registering BlockManager BlockManagerId(driver, 45788483b4be, 38513, None)
+[2025-11-19, 16:52:44 +01] {subprocess.py:93} INFO - 25/11/19 15:52:44 INFO BlockManagerMasterEndpoint: Registering block manager 45788483b4be:38513 with 434.4 MiB RAM, BlockManagerId(driver, 45788483b4be, 38513, None)
+[2025-11-19, 16:52:44 +01] {subprocess.py:93} INFO - 25/11/19 15:52:44 INFO BlockManagerMaster: Registered BlockManager BlockManagerId(driver, 45788483b4be, 38513, None)
+[2025-11-19, 16:52:44 +01] {subprocess.py:93} INFO - 25/11/19 15:52:44 INFO BlockManager: Initialized BlockManager: BlockManagerId(driver, 45788483b4be, 38513, None)
+[2025-11-19, 16:52:44 +01] {subprocess.py:93} INFO - 25/11/19 15:52:44 INFO SharedState: Setting hive.metastore.warehouse.dir ('null') to the value of spark.sql.warehouse.dir.
+[2025-11-19, 16:52:44 +01] {subprocess.py:93} INFO - 25/11/19 15:52:44 INFO SharedState: Warehouse path is 'file:/opt/work/spark-warehouse'.
+[2025-11-19, 16:52:47 +01] {subprocess.py:93} INFO - 25/11/19 15:52:47 INFO CatalogUtil: Loading custom FileIO implementation: org.apache.iceberg.aws.s3.S3FileIO
+[2025-11-19, 16:52:49 +01] {subprocess.py:93} INFO - 25/11/19 15:52:49 INFO V2ScanRelationPushDown:
+[2025-11-19, 16:52:49 +01] {subprocess.py:93} INFO - Output: payload#1, ingest_ts#2
+[2025-11-19, 16:52:49 +01] {subprocess.py:93} INFO - 
+[2025-11-19, 16:52:49 +01] {subprocess.py:93} INFO - 25/11/19 15:52:49 INFO SnapshotScan: Scanning table rest.raw.avito snapshot 1475341129828569366 created at 2025-11-19T15:52:41.067+00:00 with filter true
+[2025-11-19, 16:52:51 +01] {subprocess.py:93} INFO - 25/11/19 15:52:51 INFO BaseDistributedDataScan: Planning file tasks locally for table rest.raw.avito
+[2025-11-19, 16:52:51 +01] {subprocess.py:93} INFO - 25/11/19 15:52:51 INFO LoggingMetricsReporter: Received metrics report: ScanReport{tableName=rest.raw.avito, snapshotId=1475341129828569366, filter=true, schemaId=0, projectedFieldIds=[2, 3], projectedFieldNames=[payload, ingest_ts], scanMetrics=ScanMetricsResult{totalPlanningDuration=TimerResult{timeUnit=NANOSECONDS, totalDuration=PT1.562472069S, count=1}, resultDataFiles=CounterResult{unit=COUNT, value=45}, resultDeleteFiles=CounterResult{unit=COUNT, value=0}, totalDataManifests=CounterResult{unit=COUNT, value=45}, totalDeleteManifests=CounterResult{unit=COUNT, value=0}, scannedDataManifests=CounterResult{unit=COUNT, value=45}, skippedDataManifests=CounterResult{unit=COUNT, value=0}, totalFileSizeInBytes=CounterResult{unit=BYTES, value=253328}, totalDeleteFileSizeInBytes=CounterResult{unit=BYTES, value=0}, skippedDataFiles=CounterResult{unit=COUNT, value=0}, skippedDeleteFiles=CounterResult{unit=COUNT, value=0}, scannedDeleteManifests=CounterResult{unit=COUNT, value=0}, skippedDeleteManifests=CounterResult{unit=COUNT, value=0}, indexedDeleteFiles=CounterResult{unit=COUNT, value=0}, equalityDeleteFiles=CounterResult{unit=COUNT, value=0}, positionalDeleteFiles=CounterResult{unit=COUNT, value=0}}, metadata={engine-version=3.5.1, iceberg-version=Apache Iceberg 1.6.0 (commit 229d8f6fcd109e6c8943ea7cbb41dab746c6d0ed), app-id=local-1763567564364, engine-name=spark}}
+[2025-11-19, 16:52:51 +01] {subprocess.py:93} INFO - 25/11/19 15:52:51 INFO SparkPartitioningAwareScan: Reporting UnknownPartitioning with 12 partition(s) for table rest.raw.avito
+.................INFO - 25/11/19 15:52:55 INFO CodeGenerator: Code generated in 12.563638 ms
+[2025-11-19, 16:52:55 +01] {subprocess.py:93} INFO - 25/11/19 15:52:55 INFO CodeGenerator: Code generated in 6.006889 ms
+[2025-11-19, 16:52:55 +01] {subprocess.py:93} INFO - 25/11/19 15:52:55 INFO CodeGenerator: Code generated in 5.887063 ms
+[2025-11-19, 16:52:55 +01] {subprocess.py:93} INFO - 25/11/19 15:52:55 INFO CodeGenerator: Code generated in 5.975308 ms
+[2025-11-19, 16:52:55 +01] {subprocess.py:93} INFO - 25/11/19 15:52:55 INFO CodeGenerator: Code generated in 5.59914 ms
+[2025-11-19, 16:52:56 +01] {subprocess.py:93} INFO - 25/11/19 15:52:56 INFO CodeGenerator: Code generated in 9.964312 ms
+[2025-11-19, 16:52:56 +01] {subprocess.py:93} INFO - 25/11/19 15:52:56 INFO CodeGenerator: Code generated in 9.443004 ms
+[2025-11-19, 16:52:56 +01] {subprocess.py:93} INFO - 25/11/19 15:52:56 INFO CodeGenerator: Code generated in 21.654178 ms
+[2025-11-19, 16:52:56 +01] {subprocess.py:93} INFO - 25/11/19 15:52:56 INFO CodeGenerator: Code generated in 9.965377 ms
+[2025-11-19, 16:52:56 +01] {subprocess.py:93} INFO - 25/11/19 15:52:56 INFO CodeGenerator: Code generated in 6.106487 ms
+[2025-11-19, 16:52:56 +01] {subprocess.py:93} INFO - 25/11/19 15:52:56 INFO CodeGenerator: Code generated in 10.944666 ms
+[2025-11-19, 16:52:56 +01] {subprocess.py:93} INFO - 25/11/19 15:52:56 INFO Executor: Finished task 0.0 in stage 2.0 (TID 12). 8686 bytes result sent to driver
+[2025-11-19, 16:52:56 +01] {subprocess.py:93} INFO - 25/11/19 15:52:56 INFO TaskSetManager: Finished task 0.0 in stage 2.0 (TID 12) in 457 ms on 45788483b4be (executor driver) (1/1)
+[2025-11-19, 16:52:56 +01] {subprocess.py:93} INFO - 25/11/19 15:52:56 INFO TaskSchedulerImpl: Removed TaskSet 2.0, whose tasks have all completed, from pool
+[2025-11-19, 16:52:56 +01] {subprocess.py:93} INFO - 25/11/19 15:52:56 INFO DAGScheduler: ShuffleMapStage 2 (collect at /opt/work/src/pipeline/transform/avito_raw_to_silver.py:185) finished in 0.490 s
+[2025-11-19, 16:52:56 +01] {subprocess.py:93} INFO - 25/11/19 15:52:56 INFO DAGScheduler: looking for newly runnable stages
+[2025-11-19, 16:52:56 +01] {subprocess.py:93} INFO - 25/11/19 15:52:56 INFO DAGScheduler: running: Set()
+[2025-11-19, 16:52:56 +01] {subprocess.py:93} INFO - 25/11/19 15:52:56 INFO DAGScheduler: waiting: Set()
+[2025-11-19, 16:52:56 +01] {subprocess.py:93} INFO - 25/11/19 15:52:56 INFO DAGScheduler: failed: Set()
+[2025-11-19, 16:52:56 +01] {subprocess.py:93} INFO - 25/11/19 15:52:56 INFO ShufflePartitionsUtil: For shuffle(1), advisory target size: 67108864, actual target size 1048576, minimum partition size: 1048576
+[2025-11-19, 16:52:56 +01] {subprocess.py:93} INFO - 25/11/19 15:52:56 INFO CodeGenerator: Code generated in 50.444002 ms
+[2025-11-19, 16:52:56 +01] {subprocess.py:93} INFO - 25/11/19 15:52:56 INFO SparkContext: Starting job: collect at /opt/work/src/pipeline/transform/avito_raw_to_silver.py:185
+[2025-11-19, 16:52:56 +01] {subprocess.py:93} INFO - 25/11/19 15:52:56 INFO DAGScheduler: Got job 2 (collect at /opt/work/src/pipeline/transform/avito_raw_to_silver.py:185) with 1 output partitions
+[2025-11-19, 16:52:56 +01] {subprocess.py:93} INFO - 25/11/19 15:52:56 INFO DAGScheduler: Final stage: ResultStage 5 (collect at /opt/work/src/pipeline/transform/avito_raw_to_silver.py:185)
+[2025-11-19, 16:52:56 +01] {subprocess.py:93} INFO - 25/11/19 15:52:56 INFO DAGScheduler: Parents of final stage: List(ShuffleMapStage 4)
+[2025-11-19, 16:52:56 +01] {subprocess.py:93} INFO - 25/11/19 15:52:56 INFO DAGScheduler: Missing parents: List()
+[2025-11-19, 16:52:56 +01] {subprocess.py:93} INFO - 25/11/19 15:52:56 INFO DAGScheduler: Submitting ResultStage 5 (MapPartitionsRDD[17] at collect at /opt/work/src/pipeline/transform/avito_raw_to_silver.py:185), which has no missing parents
+[2025-11-19, 16:52:56 +01] {subprocess.py:93} INFO - 25/11/19 15:52:56 INFO MemoryStore: Block broadcast_4 stored as values in memory (estimated size 57.4 KiB, free 434.2 MiB)
+[2025-11-19, 16:52:56 +01] {subprocess.py:93} INFO - 25/11/19 15:52:56 INFO MemoryStore: Block broadcast_4_piece0 stored as bytes in memory (estimated size 24.7 KiB, free 434.2 MiB)
+[2025-11-19, 16:52:56 +01] {subprocess.py:93} INFO - 25/11/19 15:52:56 INFO BlockManagerInfo: Added broadcast_4_piece0 in memory on 45788483b4be:38513 (size: 24.7 KiB, free: 434.3 MiB)
+[2025-11-19, 16:52:56 +01] {subprocess.py:93} INFO - 25/11/19 15:52:56 INFO SparkContext: Created broadcast 4 from broadcast at DAGScheduler.scala:1585
+[2025-11-19, 16:52:56 +01] {subprocess.py:93} INFO - 25/11/19 15:52:56 INFO DAGScheduler: Submitting 1 missing tasks from ResultStage 5 (MapPartitionsRDD[17] at collect at /opt/work/src/pipeline/transform/avito_raw_to_silver.py:185) (first 15 tasks are for partitions Vector(0))
+[2025-11-19, 16:52:56 +01] {subprocess.py:93} INFO - 25/11/19 15:52:56 INFO TaskSchedulerImpl: Adding task set 5.0 with 1 tasks resource profile 0
+[2025-11-19, 16:52:56 +01] {subprocess.py:93} INFO - 25/11/19 15:52:56 INFO TaskSetManager: Starting task 0.0 in stage 5.0 (TID 13) (45788483b4be, executor driver, partition 0, NODE_LOCAL, 7615 bytes)
+[2025-11-19, 16:52:56 +01] {subprocess.py:93} INFO - 25/11/19 15:52:56 INFO BlockManagerInfo: Removed broadcast_3_piece0 on 45788483b4be:38513 in memory (size: 25.8 KiB, free: 434.4 MiB)
+[2025-11-19, 16:52:56 +01] {subprocess.py:93} INFO - 25/11/19 15:52:56 INFO Executor: Running task 0.0 in stage 5.0 (TID 13)
+[2025-11-19, 16:52:56 +01] {subprocess.py:93} INFO - 25/11/19 15:52:56 INFO ShuffleBlockFetcherIterator: Getting 1 (1153.0 B) non-empty blocks including 1 (1153.0 B) local and 0 (0.0 B) host-local and 0 (0.0 B) push-merged-local and 0 (0.0 B) remote blocks
+[2025-11-19, 16:52:56 +01] {subprocess.py:93} INFO - 25/11/19 15:52:56 INFO ShuffleBlockFetcherIterator: Started 0 remote fetches in 1 ms
+[2025-11-19, 16:52:56 +01] {subprocess.py:93} INFO - 25/11/19 15:52:56 INFO CodeGenerator: Code generated in 32.474823 ms
+[2025-11-19, 16:52:56 +01] {subprocess.py:93} INFO - 25/11/19 15:52:56 INFO Executor: Finished task 0.0 in stage 5.0 (TID 13). 10287 bytes result sent to driver
+[2025-11-19, 16:52:56 +01] {subprocess.py:93} INFO - 25/11/19 15:52:56 INFO TaskSetManager: Finished task 0.0 in stage 5.0 (TID 13) in 113 ms on 45788483b4be (executor driver) (1/1)
+[2025-11-19, 16:52:56 +01] {subprocess.py:93} INFO - 25/11/19 15:52:56 INFO TaskSchedulerImpl: Removed TaskSet 5.0, whose tasks have all completed, from pool
+[2025-11-19, 16:52:56 +01] {subprocess.py:93} INFO - 25/11/19 15:52:56 INFO DAGScheduler: ResultStage 5 (collect at /opt/work/src/pipeline/transform/avito_raw_to_silver.py:185) finished in 0.139 s
+[2025-11-19, 16:52:56 +01] {subprocess.py:93} INFO - 25/11/19 15:52:56 INFO DAGScheduler: Job 2 is finished. Cancelling potential speculative or zombie tasks for this job
+[2025-11-19, 16:52:56 +01] {subprocess.py:93} INFO - 25/11/19 15:52:56 INFO TaskSchedulerImpl: Killing all running tasks in stage 5: Stage finished
+[2025-11-19, 16:52:56 +01] {subprocess.py:93} INFO - 25/11/19 15:52:56 INFO DAGScheduler: Job 2 finished: collect at /opt/work/src/pipeline/transform/avito_raw_to_silver.py:185, took 0.171136 s
+[2025-11-19, 16:52:56 +01] {subprocess.py:93} INFO - 25/11/19 15:52:56 INFO BlockManagerInfo: Removed broadcast_4_piece0 on 45788483b4be:38513 in memory (size: 24.7 KiB, free: 434.4 MiB)
+[2025-11-19, 16:52:57 +01] {subprocess.py:93} INFO - Traceback (most recent call last):
+[2025-11-19, 16:52:57 +01] {subprocess.py:93} INFO -   File "/opt/work/src/pipeline/transform/avito_raw_to_silver.py", line 258, in <module>
+[2025-11-19, 16:52:57 +01] {subprocess.py:93} INFO -     main()
+[2025-11-19, 16:52:57 +01] {subprocess.py:93} INFO -   File "/opt/work/src/pipeline/transform/avito_raw_to_silver.py", line 253, in main
+[2025-11-19, 16:52:57 +01] {subprocess.py:93} INFO -     final.select(*UNIFIED_COLS).writeTo(f"{args.catalog}.silver.listings_all").append()
+[2025-11-19, 16:52:57 +01] {subprocess.py:93} INFO -   File "/opt/spark/python/lib/pyspark.zip/pyspark/sql/readwriter.py", line 2107, in append
+[2025-11-19, 16:52:57 +01] {subprocess.py:93} INFO -   File "/opt/spark/python/lib/py4j-0.10.9.7-src.zip/py4j/java_gateway.py", line 1322, in __call__
+[2025-11-19, 16:52:57 +01] {subprocess.py:93} INFO -   File "/opt/spark/python/lib/pyspark.zip/pyspark/errors/exceptions/captured.py", line 185, in deco
+[2025-11-19, 16:52:57 +01] {subprocess.py:93} INFO - pyspark.errors.exceptions.captured.AnalysisException: [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_FIND_DATA] Cannot write incompatible data for the table `rest`.`silver`.`listings_all`: Cannot find data for the output column `salles_de_bain`.
+[2025-11-19, 16:52:57 +01] {subprocess.py:93} INFO - 25/11/19 15:52:57 INFO SparkContext: Invoking stop() from shutdown hook
+[2025-11-19, 16:52:57 +01] {subprocess.py:93} INFO - 25/11/19 15:52:57 INFO SparkContext: SparkContext is stopping with exitCode 0.
+[2025-11-19, 16:52:57 +01] {subprocess.py:93} INFO - 25/11/19 15:52:57 INFO SparkUI: Stopped Spark web UI at http://45788483b4be:4042
+[2025-11-19, 16:52:57 +01] {subprocess.py:93} INFO - 25/11/19 15:52:57 INFO MapOutputTrackerMasterEndpoint: MapOutputTrackerMasterEndpoint stopped!
+[2025-11-19, 16:52:57 +01] {subprocess.py:93} INFO - 25/11/19 15:52:57 INFO MemoryStore: MemoryStore cleared
+[2025-11-19, 16:52:57 +01] {subprocess.py:93} INFO - 25/11/19 15:52:57 INFO BlockManager: BlockManager stopped
+[2025-11-19, 16:52:57 +01] {subprocess.py:93} INFO - 25/11/19 15:52:57 INFO BlockManagerMaster: BlockManagerMaster stopped
+[2025-11-19, 16:52:57 +01] {subprocess.py:93} INFO - 25/11/19 15:52:57 INFO OutputCommitCoordinator$OutputCommitCoordinatorEndpoint: OutputCommitCoordinator stopped!
+[2025-11-19, 16:52:57 +01] {subprocess.py:93} INFO - 25/11/19 15:52:57 INFO SparkContext: Successfully stopped SparkContext
+[2025-11-19, 16:52:57 +01] {subprocess.py:93} INFO - 25/11/19 15:52:57 INFO ShutdownHookManager: Shutdown hook called
+[2025-11-19, 16:52:57 +01] {subprocess.py:93} INFO - 25/11/19 15:52:57 INFO ShutdownHookManager: Deleting directory /tmp/spark-888b8104-7977-46b7-94cc-b36c1b8f96a4
+[2025-11-19, 16:52:57 +01] {subprocess.py:93} INFO - 25/11/19 15:52:57 INFO ShutdownHookManager: Deleting directory /tmp/spark-ee09ecaa-8ffd-43fe-8241-06047200897e
+[2025-11-19, 16:52:57 +01] {subprocess.py:93} INFO - 25/11/19 15:52:57 INFO ShutdownHookManager: Deleting directory /tmp/spark-ee09ecaa-8ffd-43fe-8241-06047200897e/pyspark-3233f503-35ca-4029-9c54-2256206f99b6
+[2025-11-19, 16:52:57 +01] {subprocess.py:97} INFO - Command exited with return code 1
+[2025-11-19, 16:52:57 +01] {taskinstance.py:441} ▼ Post task execution logs
+[2025-11-19, 16:52:57 +01] {taskinstance.py:2905} ERROR - Task failed with exception
+Traceback (most recent call last):
+  File "/home/airflow/.local/lib/python3.12/site-packages/airflow/models/taskinstance.py", line 465, in _execute_task
+    result = _execute_callable(context=context, **execute_callable_kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/airflow/.local/lib/python3.12/site-packages/airflow/models/taskinstance.py", line 432, in _execute_callable
+    return execute_callable(context=context, **execute_callable_kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/airflow/.local/lib/python3.12/site-packages/airflow/models/baseoperator.py", line 401, in wrapper
+    return func(self, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/airflow/.local/lib/python3.12/site-packages/airflow/operators/bash.py", line 243, in execute
+    raise AirflowException(
+airflow.exceptions.AirflowException: Bash command failed. The command returned a non-zero exit code 1.
+[2025-11-19, 16:52:57 +01] {taskinstance.py:1206} INFO - Marking task as UP_FOR_RETRY. dag_id=avito_scraper, task_id=transform_to_silver, run_id=manual__2025-11-19T15:52:23.897029+00:00, execution_date=20251119T155223, start_date=20251119T155239, end_date=20251119T155257
+[2025-11-19, 16:52:57 +01] {standard_task_runner.py:110} ERROR - Failed to execute job 142 for task transform_to_silver (Bash command failed. The command returned a non-zero exit code 1.; 1655)
+[2025-11-19, 16:52:57 +01] {local_task_job_runner.py:243} INFO - Task exited with return code 1
+[2025-11-19, 16:52:57 +01] {taskinstance.py:3503} INFO - 0 downstream tasks scheduled from follow-on schedule check
+[2025-11-19, 16:52:57 +01] {local_task_job_runner.py:222} ▲▲▲ Log group end# dags/avito_pipeline.py
+from __future__ import annotations
+
+from datetime import datetime, timedelta
+from airflow import DAG
+from airflow.models import Variable
+from airflow.operators.bash import BashOperator
+from airflow.operators.empty import EmptyOperator
+from airflow.operators.python import BranchPythonOperator
+
+
+# ========= Parameters (tweak from Airflow UI Variables if you want) =========
+DEFAULT_PAGES = int(Variable.get("avito_pages", default_var="1"))
+DEFAULT_LIMIT = Variable.get("avito_limit", default_var="5")  # set to "None" to disable
+FALLBACK_WINDOW_MINS = int(Variable.get("avito_window_mins", default_var="35"))
+
+# NEW: start page
+DEFAULT_START_PAGE = int(Variable.get("avito_start_page", default_var="1"))
+
+SCRAPER_CONTAINER = Variable.get("scraper_container", default_var="avito-scraper")
+SPARK_CONTAINER = Variable.get("spark_container", default_var="spark-iceberg")
+
+CATALOG = Variable.get("iceberg_catalog", default_var="rest")
+KAFKA_BOOTSTRAP = Variable.get("kafka_bootstrap", default_var="kafka:9092")
+KAFKA_TOPIC = Variable.get("kafka_topic_avito", default_var="realestate.avito.raw")
+
+
+# ========================== Helpers ==========================
+def _make_scrape_cmd(
+    mode: str,
+    pages: int = DEFAULT_PAGES,
+    limit: str | None = DEFAULT_LIMIT,
+    start_page: int = DEFAULT_START_PAGE,
+) -> str:
+    """Build the docker-exec command to run the Avito producer scraper."""
+    limit_part = f"--limit {limit} " if (limit and str(limit).lower() != "none") else ""
+    start_page_part = f"--start-page {start_page} " if start_page and int(start_page) > 1 else ""
+
+    return (
+        f"docker exec -i {SCRAPER_CONTAINER} bash -lc '"
+        f"export PYTHONPATH=/app/src && "
+        f"python /app/src/pipeline/producer/avito_producer.py "
+        f"--mode {mode} --pages {pages} "
+        f"{limit_part}"
+        f"{start_page_part}"
+        f"--bootstrap {KAFKA_BOOTSTRAP} --topic {KAFKA_TOPIC}'"
+    )
+
+
+def choose_and_toggle_mode() -> str:
+    """
+    Alternate between 'louer' and 'acheter' on each run using an Airflow Variable.
+    First run defaults to 'acheter' so we start by scraping 'louer'.
+    """
+    last_mode = Variable.get("avito_scraper_last_mode", default_var="acheter")
+    next_mode = "louer" if last_mode == "acheter" else "acheter"
+    Variable.set("avito_scraper_last_mode", next_mode)
+    return "scrape_louer" if next_mode == "louer" else "scrape_acheter"
+
+
+# ============================ DAG ============================
+default_args = {
+    "owner": "avito",
+    "depends_on_past": False,
+    "retries": 2,
+    "retry_delay": timedelta(minutes=2),
+}
+
+with DAG(
+    dag_id="avito_scraper",
+    default_args=default_args,
+    description="Scrape Avito → Kafka (RAW) → Spark transform → Iceberg Silver listings_all",
+    schedule="*/5 * * * *",  # every 5 minutes
+    start_date=datetime(2025, 11, 2),
+    catchup=False,
+    max_active_runs=1,
+    tags=["avito", "scraper", "silver"],
+) as dag:
+
+    choose_mode = BranchPythonOperator(
+        task_id="choose_mode",
+        python_callable=choose_and_toggle_mode,
+    )
+
+    scrape_louer = BashOperator(
+        task_id="scrape_louer",
+        bash_command=_make_scrape_cmd("louer"),
+    )
+
+    scrape_acheter = BashOperator(
+        task_id="scrape_acheter",
+        bash_command=_make_scrape_cmd("acheter"),
+    )
+
+    scrape_done = EmptyOperator(
+        task_id="scrape_done",
+        trigger_rule="none_failed_min_one_success",
+    )
+
+    # Transform (append recent window) into rest.silver.listings_all
+    transform_to_silver = BashOperator(
+        task_id="transform_to_silver",
+        bash_command=(
+            f"docker exec -i {SPARK_CONTAINER} bash -lc "
+            "'export PYTHONPATH=/opt/work/src && "
+            "/opt/spark/bin/spark-submit --master local[*] "
+            "/opt/work/src/pipeline/transform/avito_raw_to_silver.py "
+            "--catalog rest --mode append --fallback-window-mins 35'"
+        ),
+    )
+
+    choose_mode >> [scrape_louer, scrape_acheter] >> scrape_done
+    scrape_done >> transform_to_silver
+# dags/mubawab_pipeline.py
+from __future__ import annotations
+
+from datetime import datetime, timedelta
+from airflow import DAG
+from airflow.models import Variable
+from airflow.operators.bash import BashOperator
+from airflow.operators.empty import EmptyOperator
+from airflow.operators.python import BranchPythonOperator
+
+
+# ========= Parameters (tweak from Airflow UI Variables if you want) =========
+DEFAULT_PAGES = int(Variable.get("mubawab_pages", default_var="1"))
+DEFAULT_LIMIT = Variable.get("mubawab_limit", default_var="10000")  # set to "None" to disable
+FALLBACK_WINDOW_MINS = int(Variable.get("mubawab_window_mins", default_var="35"))
+
+# NEW: start page for Mubawab
+DEFAULT_START_PAGE = int(Variable.get("mubawab_start_page", default_var="1"))
+
+# Re-use same dev scraper container if you wish
+SCRAPER_CONTAINER = Variable.get("scraper_container", default_var="avito-scraper")
+SPARK_CONTAINER = Variable.get("spark_container", default_var="spark-iceberg")
+
+CATALOG = Variable.get("iceberg_catalog", default_var="rest")
+KAFKA_BOOTSTRAP = Variable.get("kafka_bootstrap", default_var="kafka:9092")
+KAFKA_TOPIC = Variable.get("kafka_topic_mubawab", default_var="realestate.mubawab.raw")
+
+
+# ========================== Helpers ==========================
+def _make_scrape_cmd(
+    mode: str,
+    pages: int = DEFAULT_PAGES,
+    limit: str | None = DEFAULT_LIMIT,
+    start_page: int = DEFAULT_START_PAGE,
+) -> str:
+    """Build the docker-exec command to run the Mubawab producer scraper."""
+    limit_part = f"--limit {limit} " if (limit and str(limit).lower() != "none") else ""
+    start_page_part = f"--start-page {start_page} " if start_page and int(start_page) > 1 else ""
+
+    return (
+        f"docker exec -i {SCRAPER_CONTAINER} bash -lc '"
+        f"export PYTHONPATH=/app/src && "
+        f"python /app/src/pipeline/producer/mubawab_producer.py "
+        f"--mode {mode} --pages {pages} "
+        f"{limit_part}"
+        f"{start_page_part}"
+        f"--bootstrap {KAFKA_BOOTSTRAP} --topic {KAFKA_TOPIC}'"
+    )
+
+
+def choose_and_toggle_mode() -> str:
+    """
+    Alternate between 'louer' and 'acheter' on each run using an Airflow Variable.
+    First run defaults to 'acheter' so we start by scraping 'louer'.
+    """
+    last_mode = Variable.get("mubawab_scraper_last_mode", default_var="acheter")
+    next_mode = "louer" if last_mode == "acheter" else "acheter"
+    Variable.set("mubawab_scraper_last_mode", next_mode)
+    return "scrape_louer" if next_mode == "louer" else "scrape_acheter"
+
+
+# ============================ DAG ============================
+default_args = {
+    "owner": "mubawab",
+    "depends_on_past": False,
+    "retries": 2,
+    "retry_delay": timedelta(minutes=2),
+}
+
+with DAG(
+    dag_id="mubawab_scraper",
+    default_args=default_args,
+    description="Scrape Mubawab → Kafka (RAW) → Spark transform → Iceberg Silver listings_all",
+    schedule="*/5 * * * *",  # every 5 minutes (aligned with Avito)
+    start_date=datetime(2025, 11, 2),
+    catchup=False,
+    max_active_runs=1,
+    tags=["mubawab", "scraper", "silver"],
+) as dag:
+
+    choose_mode = BranchPythonOperator(
+        task_id="choose_mode",
+        python_callable=choose_and_toggle_mode,
+    )
+
+    scrape_louer = BashOperator(
+        task_id="scrape_louer",
+        bash_command=_make_scrape_cmd("louer"),
+    )
+
+    scrape_acheter = BashOperator(
+        task_id="scrape_acheter",
+        bash_command=_make_scrape_cmd("acheter"),
+    )
+
+    scrape_done = EmptyOperator(
+        task_id="scrape_done",
+        trigger_rule="none_failed_min_one_success",
+    )
+
+    # Transform (append recent window) into rest.silver.listings_all
+    transform_to_silver = BashOperator(
+        task_id="transform_to_silver",
+        bash_command=(
+            f"docker exec -i {SPARK_CONTAINER} bash -lc "
+            "'export PYTHONPATH=/opt/work/src && "
+            "/opt/spark/bin/spark-submit --master local[*] "
+            "/opt/work/src/pipeline/transform/mubawab_raw_to_silver.py "
+            "--catalog rest --mode append --fallback-window-mins 35'"
+        ),
+    )
+
+    choose_mode >> [scrape_louer, scrape_acheter] >> scrape_done
+    scrape_done >> transform_to_silver
+ # avito_scraper.py - batched Kafka, robust parsing, with listing_type
+import csv, re, time, json, argparse
+from typing import Any, Dict, List, Optional
+from urllib.parse import urljoin, urlparse, parse_qs, urlencode, urlunparse
+from datetime import datetime, timedelta
+
+import requests
+from bs4 import BeautifulSoup
+from confluent_kafka import Producer
+
+# ----------------------------
+# Defaults / Constants
+# ----------------------------
+KAFKA_BOOTSTRAP_DEFAULT = "kafka:9092"
+KAFKA_TOPIC_DEFAULT = "realestate.avito.raw"
+
+BASE = "https://www.avito.ma"
+START_LOUER = "https://www.avito_ma/fr/maroc/locations_immobilieres-à_louer".replace("_ma", ".ma")
+START_VENDRE = "https://www.avito_ma/fr/maroc/ventes_immobilieres-à_vendre".replace("_ma", ".ma")
+
+HEADERS_LIST = [
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+]
+
+ID_RE = re.compile(r"_(\d+)\.htm")
+NUM_RE = re.compile(r"[\d\s,.]+")
+
+# ----------------------------
+# Helpers
+# ----------------------------
+def pick_headers(i: int) -> Dict[str, str]:
+    return {
+        "User-Agent": HEADERS_LIST[i % len(HEADERS_LIST)] ,
+        "Accept-Language": "fr,en;q=0.9",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Cache-Control": "no-cache",
+        "Pragma": "no-cache",
+    }
+
+
+def clean_text(text: Any) -> Optional[str]:
+    if text is None:
+        return None
+    if not isinstance(text, str):
+        text = str(text)
+    text = text.replace("\n", " ").replace("\r", " ").replace("\t", " ")
+    text = re.sub(r"\s+", " ", text).strip()
+    return text or None
+
+
+def text_or_none(el) -> Optional[str]:
+    if not el:
+        return None
+    t = el.get_text(" ", strip=True)
+    return clean_text(t) if t else None
+
+
+def get_id_from_url(url: str) -> Optional[str]:
+    m = ID_RE.search(url)
+    return m.group(1) if m else None
+
+
+# normalize Avito mode -> listing_type
+def normalize_listing_type(mode: str) -> str:
+    """
+    Standardize the listing type for downstream (Silver) use:
+      - 'vendre'/'acheter' -> 'vente'
+      - 'louer' -> 'location'
+    """
+    return "vente" if mode in ("vendre", "acheter") else "location"
+
+
+# ---------- Convert relative time to absolute date ----------
+def parse_relative_date(text: str, scrape_time: datetime) -> Optional[str]:
+    """
+    Convert 'il y a X minutes/heures/jours/semaines/mois/ans' into absolute ISO datetime string.
+    """
+    if not text:
+        return None
+
+    text_lower = text.lower().strip()
+    num_match = re.search(r"(\d+)", text_lower)
+    if not num_match:
+        return scrape_time.strftime("%Y-%m-%d %H:%M:%S")
+
+    num = int(num_match.group(1))
+
+    if "minute" in text_lower:
+        delta = timedelta(minutes=num)
+    elif "heure" in text_lower:
+        delta = timedelta(hours=num)
+    elif "jour" in text_lower:
+        delta = timedelta(days=num)
+    elif "semaine" in text_lower:
+        delta = timedelta(weeks=num)
+    elif "mois" in text_lower:
+        delta = timedelta(days=num * 30)  # approx
+    elif "an" in text_lower or "année" in text_lower:
+        delta = timedelta(days=num * 365)  # approx
+    else:
+        return scrape_time.strftime("%Y-%m-%d %H:%M:%S")
+
+    absolute_date = scrape_time - delta
+    return absolute_date.strftime("%Y-%m-%d %H:%M:%S")
+
+
+# ----------------------------
+# SERP
+# ----------------------------
+def extract_listings_from_serp(html: str) -> List[str]:
+    soup = BeautifulSoup(html, "lxml")
+    out = []
+
+    # Primary card links
+    for a in soup.select('a.sc-1jge648-0[href]'):
+        href = a.get("href")
+        if href and "_" in href and ".htm" in href:
+            out.append(urljoin(BASE, href.strip()))
+
+    # Some pages use section container
+    for a in soup.select('section.sc-b341c660-0 a[href]'):
+        href = a.get("href")
+        if href and "_" in href and ".htm" in href:
+            out.append(urljoin(BASE, href.strip()))
+
+    # dedup
+    seen, urls = set(), []
+    for u in out:
+        if u not in seen:
+            seen.add(u)
+            urls.append(u)
+    return urls
+
+
+def find_next_page(html: str, current_url: str) -> Optional[str]:
+    """
+    Ancien fallback basé sur le HTML; laissé au cas où mais
+    le start_page utilise directement le paramètre 'o'.
+    """
+    soup = BeautifulSoup(html, "lxml")
+    # UI chevron next
+    for a in soup.select('a.sc-1cf7u6r-0[href]'):
+        svg = a.select_one('svg[aria-labelledby*="ChevronRight"]')
+        if svg:
+            return urljoin(BASE, a["href"])
+
+    # Fallback on 'o=' param
+    u = urlparse(current_url)
+    qs = parse_qs(u.query)
+    if "o" in qs:
+        try:
+            n = int(qs["o"][0])
+            qs["o"] = [str(n + 1)]
+            new_q = urlencode({k: (v[0] if len(v) == 1 else v) for k, v in qs.items()}, doseq=True)
+            return urlunparse((u.scheme, u.netloc, u.path, u.params, new_q, u.fragment))
+        except Exception:
+            pass
+    else:
+        return f"{current_url}?o=2"
+
+    return None
+
+
+def build_page_url(base_url: str, page: int) -> str:
+    """
+    Construit l'URL de la page N via le paramètre ?o=N (Avito).
+    page = 1 => pas de param 'o'.
+    """
+    u = urlparse(base_url)
+    qs = parse_qs(u.query)
+
+    if page <= 1:
+        qs.pop("o", None)
+    else:
+        qs["o"] = [str(page)]
+
+    new_q = urlencode({k: (v[0] if isinstance(v, list) and len(v) == 1 else v)
+                       for k, v in qs.items()}, doseq=True)
+    return urlunparse((u.scheme, u.netloc, u.path, u.params, new_q, u.fragment))
+
+
+def crawl_serp(
+    start_url: str,
+    max_pages: int,
+    delay: float,
+    max_items: Optional[int] = None,
+    start_page: int = 1,
+) -> List[str]:
+    """
+    Crawl SERP from start_page for max_pages pages.
+    Exemple: start_page=10, max_pages=10 => pages 10..19 (10 pages).
+    """
+    session = requests.Session()
+    urls: List[str] = []
+
+    current_page = start_page
+    url = build_page_url(start_url, current_page)
+
+    for page_offset in range(max_pages):
+        print(f"[SERP] Page {current_page} → {url}")
+        r = session.get(url, headers=pick_headers(current_page), timeout=30)
+        r.raise_for_status()
+        found = extract_listings_from_serp(r.text)
+
+        for u in found:
+            if u not in urls:
+                urls.append(u)
+                if max_items is not None and len(urls) >= max_items:
+                    print(f"       Reached limit {max_items}, stopping SERP crawl")
+                    return urls
+
+        print(f"       +{len(found)} found (unique total {len(urls)})")
+
+        # Stop if this was the last page to fetch
+        if page_offset >= max_pages - 1:
+            break
+
+        current_page += 1
+        url = build_page_url(start_url, current_page)
+        time.sleep(delay)
+
+    return urls
+
+
+# ----------------------------
+# attributes -> JSON
+# ----------------------------
+def extract_attributes_json(soup: BeautifulSoup) -> Dict[str, Any]:
+    attributes: Dict[str, Any] = {}
+    # Label/value pairs (selectors may evolve)
+    for item in soup.select("div.sc-cd1c365e-1.clDxnX"):
+        img = item.select_one("img")
+        value_el = item.select_one("span.sc-1x0vz2r-0.fjZBup")
+        label_el = item.select_one("span.sc-1x0vz2r-0.bXFCIH")
+        if img and "alt" in img.attrs and label_el:
+            label = clean_text(label_el.get_text())
+            value = clean_text(value_el.get_text()) if value_el else None
+            if label and value:
+                attributes[label] = value
+    return attributes
+
+
+# ----------------------------
+# details
+# ----------------------------
+def extract_from_dom(soup: BeautifulSoup, scrape_time: datetime) -> Dict[str, Any]:
+    out: Dict[str, Any] = {}
+
+    out["title"] = text_or_none(soup.select_one("h1.sc-9ca53b09-5"))
+    out["price_text"] = text_or_none(soup.select_one("p.sc-9ca53b09-10"))
+
+    # breadcrumbs
+    breadcrumbs = []
+    for a in soup.select("ol.sc-16q833i-0 a, ol.sc-16q833i-0 span.sc-16q833i-2"):
+        txt = text_or_none(a)
+        if txt:
+            breadcrumbs.append(txt)
+    out["breadcrumbs"] = " > ".join(breadcrumbs) if breadcrumbs else None
+
+    out["category"] = text_or_none(soup.select_one("div.sc-172bdcdc-0 span.sc-1x0vz2r-0.fjZBup"))
+    out["description"] = text_or_none(soup.select_one("div.sc-7378144c-0"))
+
+    attrs = extract_attributes_json(soup)
+    out["attributes"] = json.dumps(attrs, ensure_ascii=False) if attrs else None
+
+    # equipments/features list
+    equipments = []
+    for item in soup.select("div.sc-cd1c365e-0.bERAxq div.sc-cd1c365e-1"):
+        txt = text_or_none(item.select_one("span.sc-1x0vz2r-0.fjZBup"))
+        if txt:
+            equipments.append(txt)
+    out["equipments"] = "; ".join(equipments) if equipments else None
+
+    out["seller_name"] = text_or_none(soup.select_one("p.sc-1l0do2b-9"))
+    out["seller_type"] = "Boutique" if soup.select_one('svg[aria-labelledby*="ShopBadge"]') else "Particulier"
+
+    # published_date (absolute from relative)
+    time_el = soup.select_one("time")
+    if time_el:
+        relative_text = text_or_none(time_el.parent)
+        out["published_date"] = parse_relative_date(relative_text, scrape_time)
+    else:
+        out["published_date"] = None
+
+    # images
+    imgs = []
+    for img in soup.select("div.slick-slide img[src]"):
+        src = img.get("src")
+        if src and "content.avito.ma" in src:
+            imgs.append(src)
+    dedup, seen = [], set()
+    for u in imgs:
+        if u not in seen:
+            seen.add(u)
+            dedup.append(u)
+    out["image_urls"] = " | ".join(dedup) if dedup else None
+
+    return out
+
+
+def parse_property(url: str, i: int, listing_type: str) -> Dict[str, Any]:
+    """
+    Fetch and parse a single listing detail page.
+    listing_type is injected from the run_job's normalized mode ('vente'/'location').
+    """
+    scrape_time = datetime.now()
+    out: Dict[str, Any] = {
+        "id": get_id_from_url(url),
+        "url": url,
+        "error": None,
+        "listing_type": listing_type,  # NEW
+    }
+    try:
+        resp = requests.get(url, headers=pick_headers(i), timeout=30)
+        resp.raise_for_status()
+        soup = BeautifulSoup(resp.text, "lxml")
+        out.update(extract_from_dom(soup, scrape_time))
+    except Exception as e:
+        out["error"] = str(e)
+    return out
+
+
+# ----------------------------
+# Kafka helpers
+# ----------------------------
+def build_producer(bootstrap: str) -> Producer:
+    conf = {
+        "bootstrap.servers": bootstrap,
+        "enable.idempotence": True,
+        "acks": "all",
+        "compression.type": "lz4",
+        "linger.ms": 20,
+        "batch.num.messages": 10000,
+    }
+    return Producer(conf)
+
+
+def delivery_cb(err, msg):
+    if err:
+        print(f"[DLVRY_ERROR] {err} (topic={msg.topic()} key={msg.key()})")
+
+
+def send_to_kafka(row: Dict[str, Any], producer: Producer, kafka_topic: str):
+    key = str(row.get("id", "")).encode("utf-8")
+    value = json.dumps(row, ensure_ascii=False).encode("utf-8")
+    producer.produce(kafka_topic, key=key, value=value, on_delivery=delivery_cb)
+    producer.poll(0)  # non-blocking; serves delivery callbacks
+
+
+# ----------------------------
+# job
+# ----------------------------
+def run_job(
+    mode: str,
+    num_pages: int = 1,
+    sink: str = "kafka",
+    out_csv: str = "avito_out.csv",
+    kafka_bootstrap: str = KAFKA_BOOTSTRAP_DEFAULT,
+    kafka_topic: str = KAFKA_TOPIC_DEFAULT,
+    serp_delay: float = 1.5,
+    detail_delay: float = 1.5,
+    max_items: Optional[int] = None,
+    start_page: int = 1,  # NEW
+):
+    # normalize mode and compute listing_type
+    mode = "vendre" if mode in ("vendre", "acheter") else "louer"
+    start = START_VENDRE if mode == "vendre" else START_LOUER
+    listing_type = normalize_listing_type(mode)  # NEW
+
+    print(
+        f"[*] Mode: {mode.upper()} (type={listing_type}) "
+        f"| Start page: {start_page} | Pages: {num_pages} "
+        f"| Sink: {sink} | Limit: {max_items}"
+    )
+
+    urls = crawl_serp(start, num_pages, serp_delay, max_items=max_items, start_page=start_page)
+    if max_items is not None:
+        urls = urls[:max_items]
+    print(f"[*] Total URLs: {len(urls)}")
+
+    rows: List[Dict[str, Any]] = []
+    producer = build_producer(kafka_bootstrap) if sink == "kafka" else None
+
+    for i, u in enumerate(urls, 1):
+        print(f"[{i}/{len(urls)}] {u}")
+        row = parse_property(u, i, listing_type)  # NEW: pass listing_type
+        rows.append(row)
+        if producer:
+            send_to_kafka(row, producer, kafka_topic)
+        if max_items is not None and i >= max_items:
+            break
+        time.sleep(detail_delay)
+
+    if producer:
+        producer.flush(10)
+
+    if sink == "csv":
+        with open(out_csv, "w", newline="", encoding="utf-8") as f:
+            if rows:
+                fieldnames = list(rows[0].keys())
+                w = csv.DictWriter(
+                    f,
+                    fieldnames=fieldnames,
+                    extrasaction="ignore",
+                    quoting=csv.QUOTE_ALL,
+                )
+                w.writeheader()
+                for r in rows:
+                    w.writerow(r)
+        print(f"[✓] Wrote {len(rows)} rows → {out_csv}")
+    else:
+        print(f"[✓] Sent {len(rows)} messages to Kafka topic '{kafka_topic}'")
+
+
+# ----------------------------
+# CLI
+# ----------------------------
+if __name__ == "__main__":
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--mode", choices=["louer", "vendre", "acheter"], default="louer")
+    ap.add_argument("--pages", type=int, default=1)
+    ap.add_argument("--limit", type=int, default=None)
+    ap.add_argument("--sink", choices=["kafka", "csv"], default="kafka")
+    ap.add_argument("--out", default="avito_out.csv")
+    ap.add_argument("--bootstrap", default=KAFKA_BOOTSTRAP_DEFAULT)
+    ap.add_argument("--topic", default=KAFKA_TOPIC_DEFAULT)
+    ap.add_argument("--serp-delay", type=float, default=1.5)
+    ap.add_argument("--detail-delay", type=float, default=1.5)
+
+    # NEW: start page
+    ap.add_argument("--start-page", type=int, default=1)
+
+    args = ap.parse_args()
+
+    run_job(
+        mode=args.mode,
+        num_pages=args.pages,
+        sink=args.sink,
+        out_csv=args.out,
+        kafka_bootstrap=args.bootstrap,
+        kafka_topic=args.topic,
+        serp_delay=args.serp_delay,
+        detail_delay=args.detail_delay,
+        max_items=args.limit,
+        start_page=args.start_page,
+    )
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+"""
+Mubawab CC Scraper (all building categories, newest first, no surface filters)
+
+Outputs one clean record per listing (ready for Silver):
+  - id, url, error
+  - title
+  - price (numeric MAD)                 <-- single numeric field
+  - location_text
+  - description_text
+  - features_main_json                  <-- JSON map as string (incl. adDetails)
+  - features_amenities_json             <-- JSON array as string
+  - gallery_urls                        <-- JSON array as string
+  - agency_name, agency_url
+  - listing_type                        <-- 'vente' or 'location'
+"""
+
+import argparse
+import csv
+import json
+import random
+import re
+import time
+from typing import Any, Dict, List, Optional, Set
+from urllib.parse import urljoin
+
+import requests
+from bs4 import BeautifulSoup
+from confluent_kafka import Producer
+
+# ----------------------------
+# Defaults / Constants
+# ----------------------------
+KAFKA_BOOTSTRAP_DEFAULT = "kafka:9092"
+KAFKA_TOPIC_DEFAULT = "realestate.mubawab.raw"
+
+BASE = "https://www.mubawab.ma"
+
+# CC categories (sale vs rent)
+CC_DEFAULT_CATEGORIES_SALE = (
+    "apartment-sale,commercial-sale,farm-sale,house-sale,land-sale,"
+    "office-sale,other-sale,riad-sale,villa-sale"
+)
+CC_DEFAULT_CATEGORIES_RENT = (
+    "apartment-rent,commercial-rent,farm-rent,house-rent,land-rent,"
+    "office-rent,other-rent,riad-rent,villa-rent"
+)
+
+UA_LIST = [
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 13_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122 Safari/537.36",
+]
+
+ID_RE = re.compile(r"/a/(\d+)/")
+PRICE_NUM_RE = re.compile(r"[\d\s]+")
+
+# ----------------------------
+# Helpers
+# ----------------------------
+def pick_headers(i: int) -> Dict[str, str]:
+    return {
+        "User-Agent": UA_LIST[i % len(UA_LIST)],
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "fr-FR,fr;q=0.9,en;q=0.8",
+        "Cache-Control": "no-cache",
+        "Pragma": "no-cache",
+    }
+
+
+def clean_text(text: Optional[str]) -> Optional[str]:
+    if text is None:
+        return None
+    t = text.replace("\r", " ").replace("\n", " ").replace("\t", " ")
+    t = re.sub(r"\s+", " ", t).strip()
+    return t or None
+
+
+def normalize_listing_type(mode: str) -> str:
+    """Convert mode to standardized listing_type."""
+    return "vente" if mode in ("vendre", "acheter") else "location"
+
+
+def build_cc_url(mode: str, page: int, order: Optional[str], categories: str) -> str:
+    """
+    Build a CC SERP URL:
+      - vendre → /fr/cc/immobilier-a-vendre-all
+      - louer  → /fr/cc/immobilier-a-louer-all
+    Flags are colon-separated after the base: :o:n :sc:... :p:N
+    """
+    base_path = "/fr/cc/immobilier-a-vendre-all" if mode == "vendre" else "/fr/cc/immobilier-a-louer-all"
+    flags: List[str] = []
+    if order:
+        flags.append(f"o:{order}")              # e.g., n=newest
+    if categories:
+        flags.append(f"sc:{categories}")        # comma-separated list
+    if page and page > 1:
+        flags.append(f"p:{page}")               # page number
+
+    if flags:
+        return f"{BASE}{base_path}:{':'.join(flags)}"
+    return f"{BASE}{base_path}"
+
+
+def extract_firstN_links(html: str, limit: int = 25) -> List[str]:
+    """
+    Extract listing links from a CC SERP page.
+    We’re liberal and scan multiple selectors + a final fallback.
+    """
+    soup = BeautifulSoup(html, "lxml")
+    links: List[str] = []
+    seen: Set[str] = set()
+
+    # Cards that embed direct link in a 'linkref' (when present)
+    for box in soup.select('div.listingBox[linkref]'):
+        href = box.get("linkref", "").strip()
+        if href and href.startswith("http") and "/fr/a/" in href:
+            if href not in seen:
+                seen.add(href)
+                links.append(href)
+                if len(links) >= limit:
+                    return links
+
+    # Titles
+    for a in soup.select("h2.listingTit a[href]"):
+        href = a.get("href", "").strip()
+        if href.startswith("/"):
+            href = urljoin(BASE, href)
+        if href.startswith("http") and "/fr/a/" in href:
+            if href not in seen:
+                seen.add(href)
+                links.append(href)
+                if len(links) >= limit:
+                    return links
+
+    # General anchors to be safe
+    for a in soup.select('a[href*="/fr/a/"]'):
+        href = a.get("href", "").strip()
+        if href.startswith("/"):
+            href = urljoin(BASE, href)
+        if href.startswith("http") and "/fr/a/" in href and href not in seen:
+            seen.add(href)
+            links.append(href)
+            if len(links) >= limit:
+                return links
+
+    return links[:limit]
+
+
+def get_id_from_url(url: str) -> Optional[str]:
+    m = ID_RE.search(url)
+    return m.group(1) if m else None
+
+
+def parse_price_number(price_text: Optional[str]) -> Optional[int]:
+    if not price_text:
+        return None
+    m = PRICE_NUM_RE.search(price_text.replace("\u00a0", " "))
+    if not m:
+        return None
+    try:
+        return int(m.group(0).replace(" ", ""))
+    except Exception:
+        return None
+
+# ----------------------------
+# Parsing a listing page
+# ----------------------------
+def parse_listing_details(html: str) -> Dict[str, Any]:
+    """
+    Extract a minimal, clean set of fields from a Mubawab ad page.
+    All structured features (Caractéristiques générales + adDetails)
+    go into features_main_json (JSON map).
+    """
+    soup = BeautifulSoup(html, "lxml")
+    out: Dict[str, Any] = {}
+
+    # Title
+    title_el = soup.select_one("h1.searchTitle")
+    out["title"] = clean_text(title_el.get_text()) if title_el else None
+
+    # Single numeric price
+    price_el = soup.select_one("h3.orangeTit")
+    price_text = clean_text(price_el.get_text()) if price_el else None
+    out["price"] = parse_price_number(price_text)  # int or None
+
+    # Location (often "Quartier à Ville")
+    loc_el = soup.select_one("h3.greyTit")
+    out["location_text"] = clean_text(loc_el.get_text()) if loc_el else None
+
+    # ----------------------------
+    # Main characteristics → map
+    # ----------------------------
+    attr_dict: Dict[str, str] = {}
+
+    # 1) Caractéristiques générales (labels + values)
+    for feature in soup.select("div.caractBlockProp div.adMainFeature"):
+        label_el = feature.select_one("p.adMainFeatureContentLabel")
+        value_el = feature.select_one("p.adMainFeatureContentValue")
+        if label_el and value_el:
+            k = clean_text(label_el.get_text())
+            v = clean_text(value_el.get_text())
+            if k and v:
+                attr_dict[k] = v
+
+    # 2) Top icons (surface, pièces, chambres, SDB) dans .adDetails
+    detail_index = 1
+    for span in soup.select("div.adDetails div.adDetailFeature span"):
+        txt = clean_text(span.get_text())
+        if not txt:
+            continue
+
+        key = None
+        if "m²" in txt or "m2" in txt or "\u00b2" in txt:
+            key = "Surface"
+        elif "Pièce" in txt or "Pièces" in txt:
+            key = "Pièces"
+        elif "Chambre" in txt:
+            key = "Chambres"
+        elif "Salle de bain" in txt:
+            key = "Salles de bain"
+        else:
+            key = f"Detail_{detail_index}"
+            detail_index += 1
+
+        attr_dict[key] = txt
+
+    out["features_main_json"] = json.dumps(attr_dict, ensure_ascii=False) if attr_dict else None
+
+    # ----------------------------
+    # Amenities (icons like Terrasse, Ascenseur…) -> JSON array string
+    # ----------------------------
+    amenities: List[str] = []
+    for feat in soup.select("div.adFeatures div.adFeature span"):
+        txt = clean_text(feat.get_text())
+        if txt:
+            amenities.append(txt)
+    out["features_amenities_json"] = json.dumps(amenities, ensure_ascii=False) if amenities else None
+
+    # ----------------------------
+    # Description (first paragraph in blockProp)
+    # ----------------------------
+    desc_block = soup.select_one("div.blockProp")
+    desc = None
+    if desc_block:
+        p_tag = desc_block.find("p")
+        if p_tag:
+            desc = clean_text(p_tag.get_text())
+    out["description_text"] = desc
+
+    # ----------------------------
+    # Images (gallery + slider) -> JSON array string
+    # ----------------------------
+    imgs: List[str] = []
+    for img in soup.select("div.picturesGallery img[src]"):
+        src = img.get("src")
+        if src and "mubawab-media.com/ad/" in src:
+            imgs.append(src)
+    for img in soup.select("div.flipsnap img[src]"):
+        src = img.get("src")
+        if src and "mubawab-media.com/ad/" in src:
+            imgs.append(src)
+    dedup, seen = [], set()
+    for u in imgs:
+        if u not in seen:
+            seen.add(u)
+            dedup.append(u)
+    out["gallery_urls"] = json.dumps(dedup, ensure_ascii=False) if dedup else None
+
+    # ----------------------------
+    # Agency (name + url)
+    # ----------------------------
+    agency_name = agency_url = None
+    business_info = soup.select_one("div.businessInfo")
+    if business_info:
+        name_el = business_info.select_one("span.businessName")
+        if name_el:
+            agency_name = clean_text(name_el.get_text())
+        link_el = business_info.select_one("a[href]")
+        if link_el:
+            href = link_el.get("href", "").strip()
+            if href.startswith("/"):
+                href = urljoin(BASE, href)
+            agency_url = href if href.startswith("http") else None
+
+    out["agency_name"] = agency_name
+    out["agency_url"] = agency_url
+
+    return out
+
+# ----------------------------
+# Kafka helpers
+# ----------------------------
+def build_producer(bootstrap: str) -> Producer:
+    conf = {
+        "bootstrap.servers": bootstrap,
+        "enable.idempotence": True,
+        "acks": "all",
+        "compression.type": "lz4",
+        "linger.ms": 20,
+        "batch.num.messages": 10000,
+    }
+    return Producer(conf)
+
+
+def delivery_cb(err, msg):
+    if err:
+        print(f"[DLVRY_ERROR] {err} (topic={msg.topic()} key={msg.key()})")
+
+
+def send_to_kafka(row: Dict[str, Any], producer: Producer, kafka_topic: str):
+    key = (row.get("id") or "").encode("utf-8")
+    value = json.dumps(row, ensure_ascii=False).encode("utf-8")
+    producer.produce(kafka_topic, key=key, value=value, on_delivery=delivery_cb)
+    producer.poll(0)
+
+# ----------------------------
+# Crawl flow
+# ----------------------------
+def fetch_details(session: requests.Session, url: str, i: int, delay: float, listing_type: str) -> Dict[str, Any]:
+    """Fetch and parse a single listing, adding listing_type to the payload"""
+    data: Dict[str, Any] = {
+        "id": get_id_from_url(url),
+        "url": url,
+        "error": None,
+        "listing_type": listing_type,
+    }
+    try:
+        r = session.get(url, headers=pick_headers(i), timeout=30)
+        r.raise_for_status()
+        details = parse_listing_details(r.text)
+        data.update(details)
+    except Exception as e:
+        data["error"] = str(e)
+    finally:
+        time.sleep(delay + random.random() * 0.5)
+    return data
+
+
+def crawl_cc_serp(
+    mode: str,
+    num_pages: int,
+    per_page: Optional[int],
+    serp_delay: float,
+    order: str,
+    categories: str,
+    start_page: int = 1,
+) -> List[str]:
+    """
+    Crawl SERP from start_page for num_pages pages.
+    Exemple: start_page=10, num_pages=10 => pages 10..19 (10 pages).
+    """
+    session = requests.Session()
+    all_links: List[str] = []
+
+    current_page = start_page
+    for page_offset in range(num_pages):
+        url = build_cc_url(mode, current_page, order=order, categories=categories)
+        print(f"[SERP] Page {current_page} → {url}")
+        resp = session.get(url, headers=pick_headers(current_page), timeout=30)
+        resp.raise_for_status()
+        links = extract_firstN_links(resp.text, limit=per_page or 25)
+        print(f"       +{len(links)} links")
+        for u in links:
+            if u not in all_links:
+                all_links.append(u)
+
+        if page_offset < num_pages - 1:
+            current_page += 1
+            time.sleep(serp_delay)
+
+    return all_links
+
+
+def run_job(
+    mode: str,
+    num_pages: int = 1,
+    sink: str = "csv",
+    out_csv: str = "mubawab_out.csv",
+    kafka_bootstrap: str = KAFKA_BOOTSTRAP_DEFAULT,
+    kafka_topic: str = KAFKA_TOPIC_DEFAULT,
+    serp_delay: float = 1.3,
+    detail_delay: float = 1.3,
+    per_page: Optional[int] = 25,
+    max_items: Optional[int] = None,
+    order: str = "n",
+    categories: Optional[str] = None,
+    start_page: int = 1,   # NEW
+):
+    # normalize mode like Avito (support 'acheter' alias)
+    mode = "vendre" if mode in ("vendre", "acheter") else "louer"
+    listing_type = normalize_listing_type(mode)
+
+    # pick default categories if not provided
+    if not categories:
+        categories = CC_DEFAULT_CATEGORIES_SALE if mode == "vendre" else CC_DEFAULT_CATEGORIES_RENT
+
+    print(
+        f"[*] MUBAWAB CC | Mode={mode} (type={listing_type}) "
+        f"| StartPage={start_page} | Pages={num_pages} "
+        f"| Order=o:{order} | Categories={categories} "
+        f"| Sink={sink} | Limit={max_items} | PerPage={per_page}"
+    )
+
+    links = crawl_cc_serp(
+        mode,
+        num_pages,
+        per_page,
+        serp_delay,
+        order=order,
+        categories=categories,
+        start_page=start_page,
+    )
+    if max_items is not None:
+        links = links[:max_items]
+    print(f"[*] Total links: {len(links)}")
+
+    session = requests.Session()
+    rows: List[Dict[str, Any]] = []
+    producer = build_producer(kafka_bootstrap) if sink == "kafka" else None
+
+    for i, u in enumerate(links, 1):
+        print(f"[{i}/{len(links)}] {u}")
+        row = fetch_details(session, u, i, detail_delay, listing_type)
+        rows.append(row)
+        if producer:
+            send_to_kafka(row, producer, kafka_topic)
+        if max_items is not None and i >= max_items:
+            break
+
+    if producer:
+        producer.flush(10)
+
+    if sink == "csv":
+        with open(out_csv, "w", newline="", encoding="utf-8") as f:
+            if rows:
+                fieldnames = list(rows[0].keys())
+                w = csv.DictWriter(f, fieldnames=fieldnames, extrasaction="ignore", quoting=csv.QUOTE_ALL)
+                w.writeheader()
+                for r in rows:
+                    for k, v in list(r.items()):
+                        if isinstance(v, str):
+                            r[k] = re.sub(r"\s+", " ", v).strip()
+                    w.writerow(r)
+        print(f"[✓] Wrote {len(rows)} rows → {out_csv}")
+    else:
+        print(f"[✓] Sent {len(rows)} messages to Kafka topic '{kafka_topic}'")
+
+# ----------------------------
+# CLI
+# ----------------------------
+if __name__ == "__main__":
+    ap = argparse.ArgumentParser(description="Scrape Mubawab CC SERPs (all categories, newest first).")
+    ap.add_argument("--mode", choices=["louer", "vendre", "acheter"], default="louer")
+    ap.add_argument("--pages", type=int, default=1)
+    ap.add_argument("--per-page", type=int, default=25)
+    ap.add_argument("--limit", type=int, default=None)
+    ap.add_argument("--sink", choices=["kafka", "csv"], default="csv")
+    ap.add_argument("--out", default="mubawab_out.csv")
+    ap.add_argument("--bootstrap", default=KAFKA_BOOTSTRAP_DEFAULT)
+    ap.add_argument("--topic", default=KAFKA_TOPIC_DEFAULT)
+    ap.add_argument("--serp-delay", type=float, default=1.3)
+    ap.add_argument("--detail-delay", type=float, default=1.3)
+    ap.add_argument("--order", default="n", help="Mubawab cc order flag (e.g., n=newest)")
+    ap.add_argument("--categories", default=None, help="Comma-separated cc categories (override defaults)")
+
+    # NEW: start page
+    ap.add_argument("--start-page", type=int, default=1)
+
+    args = ap.parse_args()
+
+    run_job(
+        mode=args.mode,
+        num_pages=args.pages,
+        sink=args.sink,
+        out_csv=args.out,
+        kafka_bootstrap=args.bootstrap,
+        kafka_topic=args.topic,
+        serp_delay=args.serp_delay,
+        detail_delay=args.detail_delay,
+        per_page=args.per_page,
+        max_items=args.limit,
+        order=args.order,
+        categories=args.categories,
+        start_page=args.start_page,
+    )
+#!/usr/bin/env python3
+# Kafka -> Iceberg (REST) streaming sink (generic: Avito, Mubawab, ...)
+
+import argparse
+import re
+from pyspark.sql import SparkSession, functions as F
+
+
+def build_spark(rest_uri: str, s3_endpoint: str, ak: str, sk: str, app_name: str) -> SparkSession:
+    return (
+        SparkSession.builder.appName(app_name)
+        .config("spark.sql.extensions", "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions")
+        .config("spark.sql.catalog.rest", "org.apache.iceberg.spark.SparkCatalog")
+        .config("spark.sql.catalog.rest.catalog-impl", "org.apache.iceberg.rest.RESTCatalog")
+        .config("spark.sql.catalog.rest.uri", rest_uri)
+        .config("spark.sql.defaultCatalog", "rest")
+        .config("spark.sql.catalog.rest.io-impl", "org.apache.iceberg.aws.s3.S3FileIO")
+        .config("spark.sql.catalog.rest.s3.endpoint", s3_endpoint)
+        .config("spark.sql.catalog.rest.s3.path-style-access", "true")
+        .config("spark.sql.catalog.rest.s3.access-key-id", ak)
+        .config("spark.sql.catalog.rest.s3.secret-access-key", sk)
+        .config("spark.sql.catalog.rest.warehouse", "s3://lake/warehouse")
+        .getOrCreate()
+    )
+
+
+def normalize_trigger(x: str) -> str:
+    """
+    Accepts: '10', '10s', '10 sec', '10 seconds', 'PT10S'
+    Returns Spark-friendly string: '10 seconds'
+    """
+    if not x:
+        return "15 seconds"
+    s = str(x).strip().lower()
+
+    # ISO-8601 PTxxS
+    if s.startswith("pt") and s.endswith("s"):
+        n = re.sub(r"[^0-9]", "", s)
+        return f"{n} seconds" if n else "15 seconds"
+
+    # Plain number -> seconds
+    if re.fullmatch(r"[0-9]+", s):
+        return f"{s} seconds"
+
+    # 10s -> 10 seconds
+    m = re.fullmatch(r"([0-9]+)\s*s", s)
+    if m:
+        return f"{m.group(1)} seconds"
+
+    # 10 sec / 10 second / 10 seconds
+    if re.fullmatch(r"[0-9]+\s*(sec|secs|second|seconds)", s):
+        return re.sub(r"\bsecs?\b", "seconds", s)
+
+    # Fallback
+    return s
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    # purely for app name/logs clarity
+    ap.add_argument("--source", default="avito", help="logical source name for appName/logs (e.g., avito, mubawab)")
+    ap.add_argument("--rest-uri", default="http://iceberg-rest:8181")
+    ap.add_argument("--s3-endpoint", default="http://minio:9000")
+    ap.add_argument("--s3-access-key", default="admin")
+    ap.add_argument("--s3-secret-key", default="admin123")
+    ap.add_argument("--kafka-bootstrap", default="kafka:9092")
+    # defaults kept for Avito (backward compatible)
+    ap.add_argument("--topic", default="realestate.avito.raw")
+    ap.add_argument("--table", default="rest.raw.avito")
+    ap.add_argument("--checkpoint", default="s3://lake/checkpoints/avito_raw")
+    ap.add_argument("--starting-offsets", default="latest")
+    ap.add_argument("--trigger", default="15 seconds")
+    args = ap.parse_args()
+
+    app_name = f"{args.source}-kafka-to-iceberg"
+    trigger_str = normalize_trigger(args.trigger)
+
+    spark = build_spark(args.rest_uri, args.s3_endpoint, args.s3_access_key, args.s3_secret_key, app_name)
+
+    # namespace safety
+    spark.sql("CREATE NAMESPACE IF NOT EXISTS rest.raw")
+
+    kafka = (
+        spark.readStream.format("kafka")
+        .option("kafka.bootstrap.servers", args.kafka_bootstrap)
+        .option("subscribe", args.topic)
+        .option("startingOffsets", args.starting_offsets)
+        .load()
+        .select(
+            F.col("key").cast("string").alias("k"),
+            F.col("value").cast("string").alias("v"),
+            F.current_timestamp().alias("ts")
+        )
+    )
+
+    out = kafka.select(
+        F.coalesce(F.get_json_object("v", "$.id"), F.col("k")).alias("id"),
+        F.col("v").alias("payload"),
+        F.col("ts").alias("ingest_ts")
+    )
+
+    q = (
+        out.writeStream
+        .format("iceberg")
+        .outputMode("append")
+        .option("path", args.table)
+        .option("checkpointLocation", args.checkpoint)
+        .trigger(processingTime=trigger_str)
+        .start()
+    )
+    print(
+        f"✅ [{app_name}] Streaming started → {args.table} "
+        f"(topic={args.topic}, checkpoint={args.checkpoint}, trigger={trigger_str})"
+    )
+    q.awaitTermination()
+
+
+if __name__ == "__main__":
+    main()
+ #!/usr/bin/env python3
+import argparse
+from pyspark.sql import SparkSession, Window
+from pyspark.sql.functions import (
+    col, trim, lit, when, length, regexp_replace, from_json, split, size,
+    expr, array_position, element_at, coalesce, lower, row_number
+)
+from pyspark.sql.types import *
+
+UNIFIED_COLS = [
+    "id","url","error","ingest_ts","site","offre","price","title","seller",
+    "published_date","city","neighborhood","property_type","images","equipments",
+    "description_text","offre_match","surface","surface_habitable","caution","zoning",
+    "type_d_appartement","standing","surface_totale","etage","age_du_bien",
+    "nombre_de_pieces","chambres","salle_de_bain","frais_de_syndic_mois",
+    "condition","nombre_d_etage","disponibilite","salons","detail_1",
+    "features_amenities_json",
+    "type_de_terrain","type_de_bien","statut_du_terrain",
+    "surface_de_la_parcelle","type_du_sol","etage_du_bien","annees",
+    "constructibilite","livraison","orientation","etat","nombre_d_etages"
+]
+
+
+
+def build_spark():
+    return (
+        SparkSession.builder.appName("avito_raw_to_silver")
+        .config("spark.sql.extensions","org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions")
+        .config("spark.sql.catalog.rest","org.apache.iceberg.spark.SparkCatalog")
+        .config("spark.sql.catalog.rest.type","rest")
+        .config("spark.sql.catalog.rest.uri","http://iceberg-rest:8181")
+        .config("spark.sql.catalog.rest.warehouse","s3://lake/warehouse")
+        .config("spark.sql.catalog.rest.io-impl","org.apache.iceberg.aws.s3.S3FileIO")
+        .config("spark.sql.catalog.rest.s3.endpoint","http://minio:9000")
+        .config("spark.sql.catalog.rest.s3.path-style-access","true")
+        .config("spark.sql.catalog.rest.s3.access-key-id","admin")
+        .config("spark.sql.catalog.rest.s3.secret-access-key","admin123")
+        .config("spark.sql.catalog.rest.s3.region","us-east-1")
+        .getOrCreate()
+    )
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--catalog", default="rest")
+    ap.add_argument("--mode", choices=["append"], default="append")
+    ap.add_argument("--fallback-window-mins", type=int, default=35)
+    args = ap.parse_args()
+
+    spark = build_spark()
+
+    # ---- Read RAW
+    raw = spark.table(f"{args.catalog}.raw.avito")
+
+    # ---- Parse payload
+    payload_schema = StructType([
+        StructField("id", StringType()),
+        StructField("url", StringType()),
+        StructField("error", StringType()),
+        StructField("title", StringType()),
+        StructField("price_text", StringType()),
+        StructField("breadcrumbs", StringType()),
+        StructField("category", StringType()),
+        StructField("description", StringType()),
+        StructField("attributes", StringType()),
+        StructField("equipments", StringType()),
+        StructField("seller_name", StringType()),
+        StructField("seller_type", StringType()),
+        StructField("published_date", StringType()),
+        StructField("image_urls", StringType()),
+        StructField("listing_type", StringType()),
+    ])
+
+    df = (
+        raw
+        .withColumn("json", from_json(col("payload"), payload_schema))
+        .select(col("ingest_ts"), col("json.*"))
+    )
+
+    # ---- Dedup by latest ingest_ts per id
+    w = Window.partitionBy("id").orderBy(col("ingest_ts").desc())
+    df = df.withColumn("rn", row_number().over(w)).filter(col("rn")==1).drop("rn")
+
+    # ---- Keep valid URL
+    df = df.filter((col("url").isNotNull()) & (trim(col("url"))!=""))
+
+    # ---- price
+    df = df.withColumn(
+        "price",
+        when((col("price_text").isNull()) | (length(col("price_text"))==0), lit(None).cast("double"))
+        .otherwise(
+            regexp_replace(
+              regexp_replace(
+                regexp_replace(col("price_text"), u"\u00A0",""),
+                r"[ ,]",""
+              ),
+              r"[^0-9.]", ""
+            ).cast("double")
+        )
+    ).drop("price_text")
+
+    # ---- seller
+    df = (
+        df.withColumn(
+            "seller",
+            when(
+                (col("seller_name").isNull()) | (trim(col("seller_name"))=="") |
+                (lower(trim(col("seller_name"))).isin("null","none","unknown")),
+                "unknown"
+            ).otherwise(lower(trim(col("seller_name"))))
+        ).drop("seller_name","seller_type")
+    )
+
+    # ---- images
+    df = df.withColumn(
+        "images",
+        expr("FILTER(TRANSFORM(SPLIT(image_urls, '\\\\s*\\\\|\\\\s*'), x -> TRIM(x)), x -> x <> '')")
+    ).drop("image_urls")
+
+    # ---- equipments (array)
+    df = df.withColumn(
+        "equipments",
+        expr("""
+          CASE WHEN equipments IS NULL THEN array()
+          ELSE array_distinct(
+            FILTER(
+              TRANSFORM(SPLIT(equipments, '\\s*;\\s*'), x -> trim(x)),
+              x -> x <> '' AND x RLIKE '.*[A-Za-zÀ-ÿ].*'
+                   AND NOT (x RLIKE '.*[0-9].*')
+                   AND NOT (lower(x) RLIKE '.*moi.*')
+                   AND NOT (lower(x) RLIKE '^(aucune|studio)$')
+            )
+          )
+          END
+        """)
+    )
+
+    # ---- offre
+    df = df.withColumnRenamed("listing_type","offre")
+
+    # ---- city/neighborhood from breadcrumbs
+    parts = split(coalesce(col("breadcrumbs"), lit("")), " > ")
+    idx = array_position(parts, "Tout le Maroc")
+    df = (
+        df
+        .withColumn(
+            "city",
+            when((idx>lit(0)) & (size(parts) >= (idx+lit(1))),
+                 trim(element_at(parts, (idx+lit(1)).cast("int"))))
+        )
+        .withColumn(
+            "neighborhood_raw",
+            when((idx>lit(0)) & (size(parts) >= (idx+lit(2))),
+                 trim(element_at(parts, (idx+lit(2)).cast("int"))))
+        )
+    )
+    bad_neigh = ["Avito Immobilier","أفيتو للعقار","Toute la ville","Autre secteur"]
+    df = df.withColumn("neighborhood",
+                       when(col("neighborhood_raw").isin(bad_neigh), None)
+                       .otherwise(col("neighborhood_raw"))).drop("neighborhood_raw")
+
+    # ---- site
+    df = df.withColumn("site", lit("avito"))
+
+    # ---- property_type + listing phrase from category
+    parts = split(coalesce(col("category"), lit("")), r"\s*,\s*")
+    df = (
+        df.withColumn("property_type", when(size(parts)>=1, trim(parts.getItem(0))))
+          .withColumn("listing_phrase", when(size(parts)>=2, trim(parts.getItem(1))))
+    )
+
+    # expected listing
+    df = (
+        df.withColumn(
+            "listing_expected",
+            when(col("listing_phrase").isin("à louer","a louer"), lit("location"))
+            .when(col("listing_phrase").isin("à vendre","a vendre"), lit("vente"))
+        )
+        .withColumn("offre_match", when(col("listing_expected")==col("offre"), lit(True)).otherwise(lit(False)))
+        .drop("category","listing_phrase","listing_expected")
+    )
+
+    # ---- attributes → dynamic columns (keep exact values)
+    attr_map = from_json(col("attributes"), MapType(StringType(), StringType()))
+    df = df.withColumn("attr_map", attr_map)
+    keys = [r["k"] for r in df.selectExpr("explode(map_keys(attr_map)) as k").distinct().collect() if r["k"]]
+
+    import unicodedata, re
+    def sanitize(name:str)->str:
+        name = unicodedata.normalize("NFKD", name).encode("ascii","ignore").decode("ascii")
+        name = re.sub(r"[^0-9a-zA-Z]+","_",name).strip("_")
+        return name.lower()
+
+    for k in keys:
+        df = df.withColumn(sanitize(k), trim(col("attr_map")[k]))
+    df = df.drop("attr_map")  # keep raw 'attributes' to drop later per your rule
+
+    # ---- FINAL projection to unified schema
+    # description -> description_text; drop breadcrumbs/attributes
+    final = df.select(
+        col("id"), col("url"), col("error"), col("ingest_ts"), col("site"),
+        col("offre"), col("price"), col("title"), col("seller"),
+        col("published_date"), col("city"), col("neighborhood"),
+        col("property_type"), col("images"), col("equipments"),
+        col("description").alias("description_text"),
+        col("offre_match"),
+
+        # unified 'surface' field – Avito doesn't provide it, so keep NULL
+        lit(None).cast("double").alias("surface"),
+
+        # extracted attribute fields if present:
+        col(sanitize("Surface habitable")).alias("surface_habitable") if "surface_habitable" in df.columns else lit(None).alias("surface_habitable"),
+        col(sanitize("Caution")).alias("caution") if "caution" in df.columns else lit(None).alias("caution"),
+        col(sanitize("Zoning")).alias("zoning") if "zoning" in df.columns else lit(None).alias("zoning"),
+        col(sanitize("Type d'appartement")).alias("type_d_appartement") if "type_d_appartement" in df.columns else lit(None).alias("type_d_appartement"),
+        col(sanitize("Standing")).alias("standing") if "standing" in df.columns else lit(None).alias("standing"),
+        col(sanitize("Surface totale")).alias("surface_totale") if "surface_totale" in df.columns else lit(None).alias("surface_totale"),
+        col(sanitize("Étage")).alias("etage") if "etage" in df.columns else lit(None).alias("etage"),
+        col(sanitize("Âge du bien")).alias("age_du_bien") if "age_du_bien" in df.columns else lit(None).alias("age_du_bien"),
+        col(sanitize("Nombre de pièces")).alias("nombre_de_pieces") if "nombre_de_pieces" in df.columns else lit(None).alias("nombre_de_pieces"),
+        col(sanitize("Chambres")).alias("chambres") if "chambres" in df.columns else lit(None).alias("chambres"),
+        col(sanitize("Salle de bain")).alias("salle_de_bain") if "salle_de_bain" in df.columns else lit(None).alias("salle_de_bain"),
+        col(sanitize("Frais de syndic / mois")).alias("frais_de_syndic_mois") if "frais_de_syndic_mois" in df.columns else lit(None).alias("frais_de_syndic_mois"),
+        col(sanitize("Condition")).alias("condition") if "condition" in df.columns else lit(None).alias("condition"),
+        col(sanitize("Nombre d'étage")).alias("nombre_d_etage") if "nombre_d_etage" in df.columns else lit(None).alias("nombre_d_etage"),
+        col(sanitize("Disponibilité")).alias("disponibilite") if "disponibilite" in df.columns else lit(None).alias("disponibilite"),
+        col(sanitize("Salons")).alias("salons") if "salons" in df.columns else lit(None).alias("salons"),
+
+        # Mubawab-only extra detail column – NULL for Avito
+        lit(None).cast("string").alias("detail_1"),
+
+        # Mubawab-only fields → NULLs (extended)
+        lit(None).cast("string").alias("features_amenities_json"),
+        lit(None).cast("string").alias("type_de_terrain"),
+        lit(None).cast("string").alias("type_de_bien"),
+        lit(None).cast("string").alias("statut_du_terrain"),
+        lit(None).cast("string").alias("surface_de_la_parcelle"),
+        lit(None).cast("string").alias("type_du_sol"),
+        lit(None).cast("string").alias("etage_du_bien"),
+        lit(None).cast("string").alias("annees"),
+        lit(None).cast("string").alias("constructibilite"),
+        lit(None).cast("string").alias("livraison"),
+        lit(None).cast("string").alias("orientation"),
+        lit(None).cast("string").alias("etat"),
+        lit(None).cast("string").alias("nombre_d_etages"),
+    )
+
+
+    # Optional: window filter (if table large)
+    if args.fallback_window_mins and args.fallback_window_mins > 0:
+        final = final.where(col("ingest_ts") >= expr(f"timestampadd(MINUTE, -{args.fallback_window_mins}, current_timestamp())"))
+
+    # ---- Append into unified table
+    final.select(*UNIFIED_COLS).writeTo(f"{args.catalog}.silver.listings_all").append()
+
+    spark.stop()
+
+if __name__ == "__main__":
+    main()
+ #!/usr/bin/env python3
+import argparse
+import unicodedata
+import re
+
+from pyspark.sql import SparkSession, Window
+from pyspark.sql.functions import (
+    col, trim, lit, when, split, from_json, row_number, lower, expr
+)
+from pyspark.sql.types import *
+
+# Doit matcher exactement la table rest.silver.listings_all
+UNIFIED_COLS = [
+    "id","url","error","ingest_ts","site",
+    "offre","price","title","seller","published_date",
+    "city","neighborhood","property_type",
+    "images","equipments","description_text",
+
+    # AVITO-specific
+    "offre_match",
+    "surface_habitable",
+    "caution",
+    "zoning",
+    "type_d_appartement",
+    "standing",
+    "surface_totale",
+    "etage",
+    "age_du_bien",
+    "nombre_de_pieces",
+    "chambres",
+    "salle_de_bain",
+    "frais_de_syndic_mois",
+    "condition",
+    "nombre_d_etage",
+    "disponibilite",
+    "salons",
+
+    # MUBAWAB-specific
+    "features_amenities_json",
+    "type_de_terrain",
+    "type_de_bien",
+    "surface",
+    "statut_du_terrain",
+    "surface_de_la_parcelle",
+    "type_du_sol",
+    "etage_du_bien",
+    "detail_1",
+    "annees",
+    "constructibilite",
+    "salles_de_bain",
+    "livraison",
+    "pieces",
+    "orientation",
+    "etat",
+    "nombre_d_etages",
+]
+
+
+def build_spark():
+    return (
+        SparkSession.builder.appName("mubawab_raw_to_silver")
+        .config("spark.sql.extensions","org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions")
+        .config("spark.sql.catalog.rest","org.apache.iceberg.spark.SparkCatalog")
+        .config("spark.sql.catalog.rest.type","rest")
+        .config("spark.sql.catalog.rest.uri","http://iceberg-rest:8181")
+        .config("spark.sql.catalog.rest.warehouse","s3://lake/warehouse")
+        .config("spark.sql.catalog.rest.io-impl","org.apache.iceberg.aws.s3.S3FileIO")
+        .config("spark.sql.catalog.rest.s3.endpoint","http://minio:9000")
+        .config("spark.sql.catalog.rest.s3.path-style-access","true")
+        .config("spark.sql.catalog.rest.s3.access-key-id","admin")
+        .config("spark.sql.catalog.rest.s3.secret-access-key","admin123")
+        .config("spark.sql.catalog.rest.s3.region","us-east-1")
+        .getOrCreate()
+    )
+
+
+def sanitize(name: str) -> str:
+    """
+    Transforme les labels Mubawab en noms de colonnes Spark :
+      "Surface de la parcelle" -> "surface_de_la_parcelle"
+      "Étage du bien"          -> "etage_du_bien"
+      "Années"                 -> "annees"
+      "Salles de bain"         -> "salles_de_bain"
+      etc.
+    """
+    if name is None:
+        return ""
+    name = unicodedata.normalize("NFKD", name).encode("ascii","ignore").decode("ascii")
+    name = re.sub(r"[^0-9a-zA-Z]+","_", name).strip("_")
+    return name.lower()
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--catalog", default="rest")
+    ap.add_argument("--mode", choices=["append"], default="append")
+    ap.add_argument("--fallback-window-mins", type=int, default=35)
+    args = ap.parse_args()
+
+    spark = build_spark()
+
+    # Bronze/raw table (payload JSON)
+    raw = spark.table(f"{args.catalog}.raw.mubawab")
+
+    # Schéma du payload
+    payload_schema = StructType([
+        StructField("id", StringType()),
+        StructField("url", StringType()),
+        StructField("error", StringType()),
+        StructField("listing_type", StringType()),
+        StructField("title", StringType()),
+        StructField("price", DoubleType()),
+        StructField("location_text", StringType()),
+        StructField("features_amenities_json", StringType()),
+        StructField("description_text", StringType()),
+        StructField("features_main_json", StringType()),
+        StructField("gallery_urls", StringType()),
+        StructField("agency_name", StringType()),
+        StructField("agency_url", StringType()),
+        StructField("published_date", StringType()),
+    ])
+
+    df = (
+        raw
+        .withColumn("j", from_json(col("payload"), payload_schema))
+        .select(col("ingest_ts"), col("j.*"))
+    )
+
+    # Dedup: garder la dernière version par id
+    w = Window.partitionBy("id").orderBy(col("ingest_ts").desc())
+    df = df.withColumn("rn", row_number().over(w)).filter(col("rn") == 1).drop("rn")
+
+    # URL valide
+    df = df.filter((col("url").isNotNull()) & (trim(col("url")) != ""))
+
+    # Price > 0 sinon NULL
+    df = df.withColumn(
+        "price",
+        when((col("price") <= 0) | col("price").isNull(), lit(None)).otherwise(col("price"))
+    )
+
+    # seller = agency_name normalisé (sinon "unknown")
+    df = (
+        df.withColumn(
+            "seller",
+            when(
+                (col("agency_name").isNull()) | (trim(col("agency_name"))=="") |
+                (lower(trim(col("agency_name"))).isin("nan","null","unknown")),
+                "unknown"
+            ).otherwise(lower(trim(col("agency_name"))))
+        )
+        .drop("agency_name", "agency_url")
+    )
+
+    # images depuis gallery_urls (JSON array)
+    df = df.withColumn("images", from_json(col("gallery_urls"), ArrayType(StringType()))).drop("gallery_urls")
+
+    # equipments : pour l’instant NULL
+    df = df.withColumn("equipments", lit(None).cast("array<string>"))
+
+    # offre depuis listing_type
+    df = df.withColumnRenamed("listing_type", "offre")
+
+    # city / neighborhood depuis "Quartier à Ville"
+    parts = split(col("location_text"), " à ")
+    df = (
+        df.withColumn("neighborhood", trim(parts.getItem(0)))
+          .withColumn("city", trim(parts.getItem(1)))
+    )
+    df = df.withColumn(
+        "city",
+        when(col("city").isNull(), col("neighborhood")).otherwise(col("city"))
+    ).drop("location_text")
+
+    # site
+    df = df.withColumn("site", lit("mubawab"))
+
+    # features_main_json -> map, puis colonnes individuelles
+    feat_map = from_json(col("features_main_json"), MapType(StringType(), StringType()))
+    df = df.withColumn("features_map", feat_map)
+
+    # property_type (type de bien)
+    df = df.withColumn("property_type", col("features_map")["Type de bien"])
+
+    # Générer toutes les colonnes à partir des clés du map
+    keys = [
+        r["k"]
+        for r in df.selectExpr("explode(map_keys(features_map)) as k").distinct().collect()
+        if r["k"]
+    ]
+
+    for k in keys:
+        safe = sanitize(k)
+        if safe:  # évite les vides
+            df = df.withColumn(safe, trim(col("features_map")[k]))
+
+    # Plus besoin de la map brute
+    df = df.drop("features_map", "features_main_json")
+
+    # Helper pour sélectionner une colonne dérivée de features_main_json si elle existe
+    def col_or_null(label: str, alias: str):
+        safe = sanitize(label)
+        return (
+            col(safe).alias(alias)
+            if safe in df.columns
+            else lit(None).cast("string").alias(alias)
+        )
+
+    # Construction du DataFrame final aligné au schéma Silver
+    final = df.select(
+        # Commun
+        "id","url","error","ingest_ts","site",
+        "offre","price","title","seller","published_date",
+        "city","neighborhood","property_type",
+        "images","equipments","description_text",
+
+        # AVITO fields -> NULL ici (sauf ceux qu’on choisit d’alimenter plus tard)
+        lit(None).cast("boolean").alias("offre_match"),
+        lit(None).cast("string").alias("surface_habitable"),
+        lit(None).cast("string").alias("caution"),
+        lit(None).cast("string").alias("zoning"),
+        lit(None).cast("string").alias("type_d_appartement"),
+        lit(None).cast("string").alias("standing"),
+        lit(None).cast("string").alias("surface_totale"),
+        lit(None).cast("string").alias("etage"),
+        lit(None).cast("string").alias("age_du_bien"),
+        # Ces 3 suivants peuvent aussi venir de features_main_json si tu veux,
+        # pour l’instant on les laisse NULL pour Avito, mais:
+        # - "Pièces"   -> pieces
+        # - "Chambres" -> chambres
+        # - "Salles de bain" -> salles_de_bain
+        lit(None).cast("string").alias("nombre_de_pieces"),
+        lit(None).cast("string").alias("chambres"),
+        lit(None).cast("string").alias("salle_de_bain"),
+        lit(None).cast("string").alias("frais_de_syndic_mois"),
+        lit(None).cast("string").alias("condition"),
+        lit(None).cast("string").alias("nombre_d_etage"),
+        lit(None).cast("string").alias("disponibilite"),
+        lit(None).cast("string").alias("salons"),
+
+        # MUBAWAB-specific (dérivés de features_main_json)
+        col("features_amenities_json"),
+        col_or_null("Type de terrain", "type_de_terrain"),
+        col_or_null("Type de bien", "type_de_bien"),
+        col_or_null("Surface", "surface"),
+        col_or_null("Statut du terrain", "statut_du_terrain"),
+        col_or_null("Surface de la parcelle", "surface_de_la_parcelle"),
+        col_or_null("Type du sol", "type_du_sol"),
+        col_or_null("Étage du bien", "etage_du_bien"),
+        # detail_1 : pour l'instant NULL (réservé si tu veux mapper autre chose après)
+        lit(None).cast("string").alias("detail_1"),
+        col_or_null("Années", "annees"),
+        col_or_null("Constructibilité", "constructibilite"),
+        col_or_null("Salles de bain", "salles_de_bain"),
+        col_or_null("Livraison", "livraison"),
+        col_or_null("Pièces", "pieces"),
+        col_or_null("Orientation", "orientation"),
+        col_or_null("Etat", "etat"),
+        col_or_null("Nombre d'étages", "nombre_d_etages"),
+    )
+
+    # Fallback window (optionnel, garde juste les X dernières minutes)
+    if args.fallback_window_mins and args.fallback_window_mins > 0:
+        final = final.where(
+            col("ingest_ts") >= expr(f"timestampadd(MINUTE, -{args.fallback_window_mins}, current_timestamp())")
+        )
+
+    # Écriture dans la Silver unifiée
+    (
+        final.select(*UNIFIED_COLS)
+             .writeTo(f"{args.catalog}.silver.listings_all")
+             .append()
+    )
+
+    spark.stop()
+
+
+if __name__ == "__main__":
+    main()
